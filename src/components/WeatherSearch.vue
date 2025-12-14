@@ -107,11 +107,11 @@ export default {
       suggestions: [],
       showSuggestions: false,
       popularCities: [
-        { name: "London", country: "GB" },
-        { name: "New York", country: "US" },
-        { name: "Tokyo", country: "JP" },
-        { name: "Paris", country: "FR" },
-        { name: "Sydney", country: "AU" }
+        { name: "Phnom Penh", country: "KH" },
+        { name: "Siem Reap", country: "KH" },
+        { name: "Battambang", country: "KH" },
+        { name: "Sihanoukville", country: "KH" },
+        { name: "Kampot", country: "KH" }
       ],
       debounceTimer: null,
     };

@@ -71,7 +71,7 @@
         </div>
         
         <!-- Weather Map Card -->
-        <div class="weather-card full-width" data-aos="fade-up" data-aos-delay="250">
+        <div id="weather-map-section" class="weather-card full-width" data-aos="fade-up" data-aos-delay="250">
           <div class="card-header">
             <h2><i class="fas fa-map-marked-alt me-2"></i>Weather Map</h2>
           </div>
@@ -79,7 +79,7 @@
         </div>
         
         <!-- Hourly Forecast Card -->
-        <div class="weather-card full-width" data-aos="fade-up" data-aos-delay="300">
+        <div id="hourly-forecast-section" class="weather-card full-width" data-aos="fade-up" data-aos-delay="300">
           <div class="card-header">
             <h2><i class="fas fa-clock me-2"></i>Hourly Forecast</h2>
             <button class="toggle-view-btn"><i class="fas fa-chart-line"></i></button>
@@ -88,7 +88,7 @@
         </div>
         
         <!-- 5-Day Forecast Card -->
-        <div class="weather-card full-width" data-aos="fade-up" data-aos-delay="400">
+        <div id="five-day-forecast-section" class="weather-card full-width" data-aos="fade-up" data-aos-delay="400">
           <div class="card-header">
             <h2><i class="fas fa-calendar-week me-2"></i>5-Day Forecast</h2>
           </div>
@@ -104,6 +104,26 @@
         </div>
       </div>
     </main>
+    
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-navbar">
+      <button class="bottom-nav-item" @click="scrollToSection('weather-map-section')" title="Weather Map">
+        <i class="fas fa-map-marked-alt"></i>
+        <span>Map</span>
+      </button>
+      <button class="bottom-nav-item" @click="scrollToSection('hourly-forecast-section')" title="Hourly Forecast">
+        <i class="fas fa-clock"></i>
+        <span>Hourly</span>
+      </button>
+      <button class="bottom-nav-item" @click="scrollToSection('five-day-forecast-section')" title="5-Day Forecast">
+        <i class="fas fa-calendar-week"></i>
+        <span>5-Day</span>
+      </button>
+      <button class="bottom-nav-item" @click="scrollToTop" title="Scroll to Top">
+        <i class="fas fa-arrow-up"></i>
+        <span>Top</span>
+      </button>
+    </nav>
     
     <!-- Footer area with attribution and theme toggle -->
     <footer class="dashboard-footer">
@@ -216,6 +236,29 @@ export default {
       }
     }
     
+    // Scroll to specific section
+    const scrollToSection = (sectionId) => {
+      const element = document.getElementById(sectionId)
+      if (element) {
+        const offset = 100 // Offset for navbar
+        const elementPosition = element.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.pageYOffset - offset
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        })
+      }
+    }
+    
+    // Scroll to top of page
+    const scrollToTop = () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }
+    
     // Try to get user's location on mount
     const getUserLocation = () => {
       if (navigator.geolocation) {
@@ -268,7 +311,9 @@ export default {
       showAlertsModal,
       toggleAlertsModal,
       units,
-      switchUnits
+      switchUnits,
+      scrollToSection,
+      scrollToTop
     }
   }
 }
@@ -287,17 +332,32 @@ export default {
   
   // Header styles
   .dashboard-header {
-    padding: 1.5rem 2rem;
+    padding: 1.75rem 2.5rem;
     width: 100%;
     max-width: 1600px;
     margin: 0 auto;
     position: sticky;
     top: 0;
     z-index: 100;
-    background: var(--header-bg);
-    backdrop-filter: blur(10px);
-    box-shadow: var(--card-shadow);
-    border-radius: 0 0 1rem 1rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border-radius: 0 0 1.5rem 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    
+    @media (max-width: 1024px) {
+      padding: 1.5rem 2rem;
+    }
+    
+    @media (max-width: 768px) {
+      padding: 1.25rem 1.5rem;
+      border-radius: 0 0 1rem 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 0.4rem 0.3rem;
+      border-radius: 0 0 0.4rem 0.4rem;
+    }
     
     .header-top {
       display: flex;
@@ -313,47 +373,82 @@ export default {
     
     .units-toggle {
       display: flex;
-      border-radius: 1rem;
+      border-radius: 1.5rem;
       overflow: hidden;
-      border: 1px solid var(--border-color);
-      height: 42px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 2px solid rgba(99, 102, 241, 0.2);
+      height: 48px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      
+      @media (max-width: 480px) {
+        height: 28px;
+        border-radius: 0.6rem;
+      }
       
       .unit-btn {
-        width: 42px;
+        width: 52px;
         border: none;
         background: transparent;
         color: var(--text-secondary);
         cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: 600;
+        transition: all 0.3s ease;
+        font-weight: 700;
+        font-size: 1.1rem;
+        
+        @media (max-width: 480px) {
+          width: 32px;
+          font-size: 0.7rem;
+        }
         
         &.active {
-          background: var(--accent-color);
+          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
           color: white;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+          transform: scale(1.05);
         }
         
         &:hover:not(.active) {
-          background: var(--btn-hover-bg);
+          background: rgba(99, 102, 241, 0.1);
+          transform: translateY(-2px);
         }
       }
     }
     
     .location-info {
-      margin-top: 1rem;
+      margin-top: 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
+      gap: 0.5rem;
       
       h1 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: var(--accent-color);
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         margin: 0;
+        letter-spacing: -0.5px;
+        
+        @media (max-width: 1024px) {
+          font-size: 1.75rem;
+        }
+        
+        @media (max-width: 768px) {
+          font-size: 1.5rem;
+        }
+        
+        @media (max-width: 480px) {
+          font-size: 0.9rem;
+          letter-spacing: 0;
+        }
         
         .location-icon {
-          color: var(--accent-color);
+          color: #6366f1;
           animation: pulse 2s infinite;
+          filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.4));
         }
       }
       
@@ -361,6 +456,10 @@ export default {
         color: var(--text-secondary);
         font-size: 0.9rem;
         margin: 0;
+        
+        @media (max-width: 480px) {
+          font-size: 0.6rem;
+        }
       }
     }
   }
@@ -379,6 +478,24 @@ export default {
     max-width: 1600px;
     margin-left: auto;
     margin-right: auto;
+    
+    @media (max-width: 1024px) {
+      padding: 0.625rem 1.5rem;
+      margin: 0.5rem 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      padding: 0.625rem 1rem;
+      margin: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 0.25rem 0.3rem;
+      margin: 0.2rem 0.3rem;
+      font-size: 0.65rem;
+      border-radius: 0.4rem;
+    }
     
     &:hover {
       background: rgba(244, 67, 54, 0.15);
@@ -416,36 +533,106 @@ export default {
   .dashboard-content {
     flex: 1;
     width: 100%;
-    max-width: 1600px;
-    margin: 1rem auto 2rem;
-    padding: 0 2rem;
+    max-width: 100%;
+    margin: 1.5rem auto 2.5rem;
+    padding: 0 2.5rem;
+    
+    @media (max-width: 1024px) {
+      padding: 0 1.5rem;
+      margin: 0.75rem auto 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      padding: 0 1rem;
+      margin: 0.5rem auto 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 0 0.25rem;
+      margin: 0.15rem auto 0.4rem;
+    }
     
     .weather-hero {
       margin-bottom: 2rem;
       border-radius: 1.5rem;
       overflow: hidden;
       box-shadow: var(--card-shadow);
+      
+      @media (max-width: 1024px) {
+        margin-bottom: 1.5rem;
+        border-radius: 1.25rem;
+      }
+      
+      @media (max-width: 768px) {
+        margin-bottom: 1.25rem;
+        border-radius: 1rem;
+      }
+      
+      @media (max-width: 480px) {
+        margin-bottom: 0.4rem;
+        border-radius: 0.5rem;
+      }
     }
     
     .weather-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      
+      @media (max-width: 1400px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      @media (max-width: 1024px) {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+      }
       
       @media (max-width: 768px) {
         grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      @media (max-width: 480px) {
+        gap: 0.3rem;
       }
       
       .weather-card {
-        background: var(--card-bg);
-        border-radius: 1rem;
+        background: linear-gradient(135deg, var(--card-bg) 0%, rgba(255, 255, 255, 0.8) 100%);
+        backdrop-filter: blur(10px);
+        border-radius: 1.5rem;
         overflow: hidden;
-        box-shadow: var(--card-shadow);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        transition: all 0.3s ease;
+        
+        @media (max-width: 480px) {
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
         
         &:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--card-shadow-hover);
+          transform: translateY(-8px) scale(1.01);
+          box-shadow: 0 16px 48px rgba(99, 102, 241, 0.15);
+          border-color: rgba(99, 102, 241, 0.2);
+        }
+        
+        @media (max-width: 1024px) {
+          border-radius: 1.25rem;
+          
+          &:hover {
+            transform: translateY(-5px);
+          }
+        }
+        
+        @media (max-width: 768px) {
+          border-radius: 1rem;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+          
+          &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
+          }
         }
         
         &.full-width {
@@ -456,19 +643,68 @@ export default {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 1rem 1.5rem;
-          border-bottom: 1px solid var(--border-color);
+          padding: 1.25rem 1.75rem;
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+          border-bottom: 2px solid rgba(99, 102, 241, 0.1);
+          
+          @media (max-width: 1024px) {
+            padding: 1.125rem 1.5rem;
+          }
+          
+          @media (max-width: 768px) {
+            padding: 1rem 1.25rem;
+          }
+          
+          @media (max-width: 480px) {
+            padding: 0.4rem 0.5rem;
+          }
           
           h2 {
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-size: 1.3rem;
+            font-weight: 700;
             margin: 0;
             display: flex;
             align-items: center;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            
+            @media (max-width: 768px) {
+              font-size: 1.1rem;
+            }
+            
+            @media (max-width: 480px) {
+              font-size: 0.85rem;
+            }
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            
+            @media (max-width: 1024px) {
+              font-size: 1.2rem;
+            }
+            
+            @media (max-width: 768px) {
+              font-size: 1.1rem;
+            }
+            
+            @media (max-width: 480px) {
+              font-size: 0.85rem;
+            }
             
             i {
-              color: var(--accent-color);
-              margin-right: 0.5rem;
+              color: #6366f1;
+              margin-right: 0.75rem;
+              font-size: 1.4rem;
+              filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
+              
+              @media (max-width: 768px) {
+                font-size: 1.2rem;
+                margin-right: 0.5rem;
+              }
+              
+              @media (max-width: 480px) {
+                font-size: 0.8rem;
+                margin-right: 0.25rem;
+              }
             }
           }
           
@@ -643,18 +879,250 @@ export default {
   --btn-hover-bg: rgba(99, 102, 241, 0.1);
 }
 
+// Light theme overrides for better daytime visibility
+body:not(.dark-theme) {
+  --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #fef3c7 50%, #fce7f3 100%);
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --accent-color: #6366f1;
+  --border-color: rgba(203, 213, 225, 0.6);
+  --card-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+  --card-shadow-hover: 0 10px 30px rgba(99, 102, 241, 0.15);
+  
+  .weather-card {
+    background: rgba(255, 255, 255, 0.98) !important;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.1) !important;
+    border: 1px solid rgba(99, 102, 241, 0.1) !important;
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08)) !important;
+    border-bottom: 2px solid rgba(99, 102, 241, 0.15) !important;
+    
+    h2 {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+  
+  .dashboard-header {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+  }
+  
+  .location-info h1 {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .units-toggle {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(99, 102, 241, 0.2);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+    
+    .unit-btn {
+      color: #475569;
+      font-weight: 600;
+      
+      &.active {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+      }
+      
+      &:hover:not(.active) {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+      }
+    }
+  }
+  
+  .alerts-banner {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.12));
+    border: 2px solid rgba(239, 68, 68, 0.3);
+    
+    .alert-icon {
+      color: #dc2626;
+    }
+    
+    .alert-message p {
+      color: #991b1b;
+    }
+  }
+}
+
 // Dark theme variables
 body.dark-theme {
   --bg-gradient: linear-gradient(135deg, #0f172a, #1e293b, #334155);
-  --header-bg: rgba(15, 23, 42, 0.85);
-  --card-bg: rgba(30, 41, 59, 0.9);
+  --header-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  --card-bg: rgba(30, 41, 59, 0.85);
   --footer-bg: rgba(15, 23, 42, 0.7);
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --accent-color: #818cf8;
   --border-color: rgba(51, 65, 85, 0.5);
-  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  --card-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.3);
-  --btn-hover-bg: rgba(129, 140, 248, 0.1);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --card-shadow-hover: 0 16px 48px rgba(99, 102, 241, 0.2);
+  --btn-hover-bg: rgba(129, 140, 248, 0.15);
+  
+  .weather-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+    border-color: rgba(51, 65, 85, 0.4) !important;
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%) !important;
+    border-bottom-color: rgba(99, 102, 241, 0.2) !important;
+    
+    h2 {
+      background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    i {
+      color: #818cf8 !important;
+      filter: drop-shadow(0 2px 4px rgba(129, 140, 248, 0.4));
+    }
+  }
+  
+  .units-toggle {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Bottom Navigation Bar Styles
+.bottom-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 -4px 24px rgba(99, 102, 241, 0.15);
+  border-top: 2px solid rgba(99, 102, 241, 0.2);
+  z-index: 999;
+  transition: all 0.3s ease;
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem 0.4rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0.25rem 0.15rem;
+  }
+  
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    border: none;
+    color: #475569;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    min-width: 70px;
+    
+    @media (max-width: 768px) {
+      padding: 0.5rem 0.75rem;
+      min-width: 60px;
+      font-size: 0.8rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 0.25rem 0.3rem;
+      min-width: 42px;
+      font-size: 0.6rem;
+      gap: 0.08rem;
+    }
+    
+    i {
+      font-size: 1.25rem;
+      transition: all 0.3s ease;
+      
+      @media (max-width: 768px) {
+        font-size: 1.1rem;
+      }
+      
+      @media (max-width: 480px) {
+        font-size: 0.85rem;
+      }
+    }
+    
+    span {
+      font-size: 0.75rem;
+      
+      @media (max-width: 480px) {
+        font-size: 0.55rem;
+      }
+    }
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+      color: #6366f1;
+      transform: translateY(-2px);
+      
+      i {
+        transform: scale(1.15);
+        color: #6366f1;
+      }
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}
+
+// Dark theme for bottom navbar
+body.dark-theme .bottom-navbar {
+  background: rgba(30, 41, 59, 0.98);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+  border-top-color: rgba(99, 102, 241, 0.3);
+  
+  .bottom-nav-item {
+    color: #94a3b8;
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+      color: #818cf8;
+      
+      i {
+        color: #818cf8;
+      }
+    }
+  }
+}
+
+// Add padding to dashboard content to prevent overlap with bottom nav
+.weather-dashboard {
+  padding-bottom: 80px;
+  
+  @media (max-width: 768px) {
+    padding-bottom: 70px;
+  }
+  
+  @media (max-width: 480px) {
+    padding-bottom: 65px;
+  }
 }
 </style>

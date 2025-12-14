@@ -198,8 +198,8 @@ export default {
 /* General Card Styling */
 .current-weather-card {
   width: 100%;
-  max-width: 650px;
-  margin: 20px auto;
+  max-width: 100%;
+  margin: 0 auto;
   border: none;
   background: linear-gradient(135deg, #6366f1, #a855f7); /* Modern purple gradient */
   border-radius: 20px;
@@ -209,6 +209,28 @@ export default {
   padding: 25px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
+}
+
+@media (max-width: 1024px) {
+  .current-weather-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .current-weather-card {
+    padding: 18px;
+    border-radius: 14px;
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .current-weather-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
 }
 
 .current-weather-card:hover {

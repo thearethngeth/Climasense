@@ -124,10 +124,11 @@ export default {
           8
         );
         
-        // Add OpenStreetMap base layer
+        // Add OpenStreetMap base layer with English language
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 18
+          maxZoom: 18,
+          language: 'en'
         }).addTo(map);
         
         // Add initial weather layer
@@ -241,17 +242,27 @@ export default {
 
 <style scoped>
 .weather-map-card {
-  background: var(--card-bg, white);
-  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
   overflow: hidden;
   height: 100%;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.weather-map-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
 .map-controls {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color, rgba(203, 213, 225, 0.5));
+  padding: 1.25rem;
+  border-bottom: 2px solid rgba(203, 213, 225, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(249, 250, 251, 0.3) 100%);
 }
 
 .layer-selectors {
@@ -262,54 +273,79 @@ export default {
 }
 
 .layer-btn {
-  background: transparent;
-  border: 1px solid var(--border-color, rgba(203, 213, 225, 0.5));
-  border-radius: 20px;
-  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%);
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  border-radius: 24px;
+  padding: 0.6rem 1.2rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   cursor: pointer;
   white-space: nowrap;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
+  color: #4b5563;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .layer-btn:hover {
-  background: var(--btn-hover-bg, rgba(99, 102, 241, 0.1));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
 }
 
 .layer-btn.active {
-  background: var(--accent-color, #6366f1);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
-  border-color: var(--accent-color, #6366f1);
+  border-color: #6366f1;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+.layer-btn i {
+  font-size: 1.1rem;
 }
 
 .map-container {
   flex: 1;
-  min-height: 400px;
+  min-height: 500px;
   width: 100%;
   z-index: 1;
+  position: relative;
+}
+
+.map-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
 }
 
 .map-legend {
-  padding: 0.75rem 1rem;
-  background: var(--card-bg, white);
-  border-top: 1px solid var(--border-color, rgba(203, 213, 225, 0.5));
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, rgba(249, 250, 251, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border-top: 2px solid rgba(203, 213, 225, 0.2);
 }
 
 .legend-title {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.3px;
 }
 
 .legend-colors {
   display: flex;
   width: 100%;
-  height: 20px;
-  border-radius: 4px;
+  height: 28px;
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .color-item {
@@ -317,18 +353,79 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
-  color: rgba(0, 0, 0, 0.7);
-  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.75);
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+.color-item:hover {
+  transform: scale(1.05);
+  z-index: 1;
 }
 
 .map-footer {
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  border-top: 1px solid var(--border-color, rgba(203, 213, 225, 0.5));
+  align-items: center;
+  font-size: 0.8rem;
+  color: #6b7280;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.8) 100());
+  border-top: 2px solid rgba(203, 213, 225, 0.2);
+}
+
+.map-footer i {
+  color: #6366f1;
+  margin-right: 0.25rem;
+}
+
+/* Dark theme support */
+:global(body.dark-theme) {
+  .weather-map-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border-color: rgba(51, 65, 85, 0.3);
+  }
+  
+  .map-controls {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%);
+    border-bottom-color: rgba(51, 65, 85, 0.3);
+  }
+  
+  .layer-btn {
+    background: linear-gradient(135deg, rgba(51, 65, 85, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #cbd5e1;
+  }
+  
+  .layer-btn:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+  
+  .layer-btn.active {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+  }
+  
+  .map-legend,
+  .map-footer {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.9) 100%);
+    border-top-color: rgba(51, 65, 85, 0.3);
+  }
+  
+  .legend-title {
+    color: #e2e8f0;
+  }
+  
+  .map-footer {
+    color: #94a3b8;
+  }
+  
+  .map-footer i {
+    color: #818cf8;
+  }
 }
 
 /* Mobile responsive adjustments */
@@ -339,6 +436,20 @@ export default {
   
   .layer-selectors {
     justify-content: start;
+  }
+  
+  .layer-btn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+  }
+  
+  .layer-btn span {
+    display: none;
+  }
+  
+  .layer-btn i {
+    font-size: 1.2rem;
+    margin: 0;
   }
 }
 </style>
