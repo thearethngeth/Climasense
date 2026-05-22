@@ -197,8 +197,6 @@ body {
    NAV
 ══════════════════════════════════════ */
 .top-nav {
-  position: sticky;
-  top: 0;
   z-index: 1000;
   height: var(--nav-height);
   background: var(--nav-bg);

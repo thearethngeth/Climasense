@@ -462,7 +462,6 @@ export default {
 }
 
 .search-header {
-  position: sticky;
   top: 60px;
   z-index: 100;
   border-bottom: 1px solid var(--border);
