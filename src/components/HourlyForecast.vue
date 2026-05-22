@@ -45,10 +45,10 @@
             {{ formatDay(forecast.dt_txt) }}
           </div>
           <div class="hour-icon">
-            <img
-              :src="getWeatherIcon(forecast.weather[0].icon)"
-              :alt="forecast.weather[0].description"
-            />
+            <i
+              :class="[getWeatherIcon(forecast.weather[0].icon), getIconColor(forecast.weather[0].icon)]"
+              :title="forecast.weather[0].description"
+            ></i>
           </div>
           <div class="hour-temp">{{ formatTemp(forecast.main.temp) }}&deg;C</div>
           <div class="hour-feels-like" v-if="showFeelsLike(forecast)">
@@ -132,8 +132,51 @@ export default {
     formatTemp(temp) {
       return temp.toFixed(1);
     },
-    getWeatherIcon(icon) {
-      return `https://openweathermap.org/img/wn/${icon}@2x.png`; // Fetch weather icon from OpenWeather
+    getWeatherIcon(iconCode) {
+      const iconMap = {
+        '01d': 'fas fa-sun',
+        '01n': 'fas fa-moon',
+        '02d': 'fas fa-cloud-sun',
+        '02n': 'fas fa-cloud-moon',
+        '03d': 'fas fa-cloud',
+        '03n': 'fas fa-cloud',
+        '04d': 'fas fa-cloud',
+        '04n': 'fas fa-cloud',
+        '09d': 'fas fa-cloud-rain',
+        '09n': 'fas fa-cloud-rain',
+        '10d': 'fas fa-cloud-sun-rain',
+        '10n': 'fas fa-cloud-moon-rain',
+        '11d': 'fas fa-bolt',
+        '11n': 'fas fa-bolt',
+        '13d': 'fas fa-snowflake',
+        '13n': 'fas fa-snowflake',
+        '50d': 'fas fa-smog',
+        '50n': 'fas fa-smog'
+      };
+      return iconMap[iconCode] || 'fas fa-cloud';
+    },
+    getIconColor(iconCode) {
+      const colorMap = {
+        '01d': 'icon-sun',
+        '01n': 'icon-moon',
+        '02d': 'icon-cloud-sun',
+        '02n': 'icon-cloud-moon',
+        '03d': 'icon-cloud',
+        '03n': 'icon-cloud',
+        '04d': 'icon-cloud',
+        '04n': 'icon-cloud',
+        '09d': 'icon-rain',
+        '09n': 'icon-rain',
+        '10d': 'icon-rain',
+        '10n': 'icon-rain',
+        '11d': 'icon-thunder',
+        '11n': 'icon-thunder',
+        '13d': 'icon-snow',
+        '13n': 'icon-snow',
+        '50d': 'icon-fog',
+        '50n': 'icon-fog'
+      };
+      return colorMap[iconCode] || 'icon-cloud';
     },
     isCurrentHour(datetime) {
       const now = moment();
@@ -151,14 +194,10 @@ export default {
       return !prevDay.isSame(currentDay);
     },
     showFeelsLike(forecast) {
-      // Only show feels-like if it's significantly different from actual temp (>1°C difference)
+      // Only show feels-like if it is significantly different from actual temperature.
       return Math.abs(forecast.main.temp - forecast.main.feels_like) > 1;
     },    async fetchData() {
-      try {
-        await this.$store.dispatch("fetchForecast");
-      } catch (error) {
-        console.error("Failed to fetch hourly forecast data:", error);
-      }
+      // Data is fetched by HomeView on load, so no separate dispatch is needed here.
     },
     scrollLeft() {
       if (this.$refs.scrollContainer) {
@@ -296,7 +335,7 @@ export default {
   width: 50px;
   height: 50px;
   background: #e2e8f0;
-  border-radius: 50%;
+  border-radius: 12px;
   margin: 10px 0;
 }
 
@@ -356,25 +395,44 @@ export default {
 /* Individual hour card */
 .hourly-card {
   min-width: 150px;
-  background: white;
-  border-radius: 16px;
+  background: linear-gradient(to bottom, #ffffff, #fdfbff);
+  border-radius: 20px;
   padding: 20px;
   text-align: center;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(236, 72, 153, 0.1);
+}
+
+.hourly-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ec4899, #8b5cf6, #ec4899);
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+
+.hourly-card:hover::before {
+  transform: translateX(0);
 }
 
 .hourly-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08);
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 20px 40px rgba(236, 72, 153, 0.15);
+  border-color: rgba(236, 72, 153, 0.3);
 }
 
 .hourly-card.current-hour {
-  background: linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(139, 92, 246, 0.1));
-  border: 2px solid rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(139, 92, 246, 0.15));
+  border: 2px solid rgba(139, 92, 246, 0.4);
   transform: scale(1.05);
+  box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
 }
 
 .hourly-card.current-hour::before {
@@ -382,20 +440,31 @@ export default {
   position: absolute;
   top: 0;
   right: 0;
-  background: #8b5cf6;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
   color: white;
   font-size: 0.7rem;
   font-weight: 700;
-  padding: 3px 8px;
-  border-bottom-left-radius: 10px;
+  padding: 4px 10px;
+  border-bottom-left-radius: 12px;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 /* Time display */
 .hour-time {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #8b5cf6;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 5px;
+  letter-spacing: 0.5px;
 }
 
 .hour-day {
@@ -408,12 +477,91 @@ export default {
 /* Weather icon */
 .hour-icon {
   margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.hour-icon img {
-  width: 60px;
-  height: 60px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+.hour-icon i {
+  font-size: 2.8rem;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+.hourly-card:hover .hour-icon i {
+  transform: scale(1.15) rotate(-5deg);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2));
+}
+
+/* Dynamic icon colors */
+.icon-sun {
+  color: #fbbf24;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.icon-moon {
+  color: #ddd6fe;
+  filter: drop-shadow(0 0 10px rgba(221, 214, 254, 0.5));
+}
+
+.icon-cloud-sun {
+  background: linear-gradient(135deg, #fbbf24 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.icon-cloud-moon {
+  background: linear-gradient(135deg, #ddd6fe 0%, #93c5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.icon-cloud {
+  color: #94a3b8;
+}
+
+.icon-rain {
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.icon-thunder {
+  color: #eab308;
+  animation: flash 2s ease-in-out infinite;
+}
+
+.icon-snow {
+  color: #e0f2fe;
+  filter: drop-shadow(0 0 8px rgba(224, 242, 254, 0.8));
+  animation: float-snow 3s ease-in-out infinite;
+}
+
+.icon-fog {
+  color: #cbd5e1;
+  opacity: 0.8;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+  }
+}
+
+@keyframes flash {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75% { opacity: 0.6; }
+}
+
+@keyframes float-snow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* Temperature */

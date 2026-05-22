@@ -5,18 +5,28 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomeView
+    component: HomeView,
+    meta: {
+      title: 'Home | ClimaSense'
+    }
   },
   {
     path: '/about',
     name: 'about',
-    component: () => import('../views/AboutView.vue')
+    component: () => import('../views/AboutView.vue'),
+    meta: {
+      title: 'About | ClimaSense'
+    }
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes
+})
+
+router.afterEach((to) => {
+  document.title = to.meta?.title || 'ClimaSense | Live Weather Intelligence'
 })
 
 export default router

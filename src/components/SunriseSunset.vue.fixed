@@ -62,17 +62,17 @@ export default {
   name: "SunriseSunset",
   data() {
     return {
-      now: moment(),
+      now: moment.utc(),
       intervalId: null,
     };
   },
   created() {
     // Update time every minute
     this.intervalId = setInterval(() => {
-      this.now = moment();
+      this.now = moment.utc();
     }, 60000);
   },
-  destroyed() {
+  beforeUnmount() {
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
@@ -81,55 +81,63 @@ export default {
     weather() {
       return this.$store.state.weather;
     },
+    hasSunData() {
+      return Boolean(this.weather?.sys?.sunrise && this.weather?.sys?.sunset);
+    },
     formattedSunrise() {
-      if (!this.weather) return "--";
+      if (!this.hasSunData) return "--";
       return this.formatTime(this.weather.sys.sunrise);
     },
     formattedSunset() {
-      if (!this.weather) return "--";
+      if (!this.hasSunData) return "--";
       return this.formatTime(this.weather.sys.sunset);
     },
     currentTime() {
-      return this.now.format("hh:mm A");
+      if (!this.weather) return this.now.clone().local().format("hh:mm A");
+      return this.now.clone().add(this.weather.timezone, "seconds").format("hh:mm A");
     },
     sunriseTime() {
-      if (!this.weather) return null;
+      if (!this.hasSunData) return null;
       return moment.unix(this.weather.sys.sunrise)
         .add(this.weather.timezone, "seconds");
     },
     sunsetTime() {
-      if (!this.weather) return null;
+      if (!this.hasSunData) return null;
       return moment.unix(this.weather.sys.sunset)
         .add(this.weather.timezone, "seconds");
     },
+    cityNow() {
+      if (!this.weather) return this.now;
+      return this.now.clone().add(this.weather.timezone, "seconds");
+    },
     isNight() {
       if (!this.sunriseTime || !this.sunsetTime) return false;
-      return this.now.isBefore(this.sunriseTime) || this.now.isAfter(this.sunsetTime);
+      return this.cityNow.isBefore(this.sunriseTime) || this.cityNow.isAfter(this.sunsetTime);
     },
     sunPosition() {
-      if (!this.weather) return 50;
+      if (!this.weather || !this.sunriseTime || !this.sunsetTime) return 50;
       
-      const now = this.now;
+      const now = this.cityNow;
       const sunrise = this.sunriseTime;
       const sunset = this.sunsetTime;
       
       // If it's before sunrise or after sunset
       if (now.isBefore(sunrise)) {
-        return 0;
+        return 10;
       } else if (now.isAfter(sunset)) {
-        return 100;
+        return 90;
       }
       
       // Calculate position during daylight
       const dayDuration = sunset.diff(sunrise);
       const timeElapsed = now.diff(sunrise);
-      return (timeElapsed / dayDuration) * 100;
+      return 10 + (timeElapsed / dayDuration) * 80;
     },
     dayProgressPercentage() {
       return Math.min(100, Math.max(0, this.sunPosition));
     },
     dayLength() {
-      if (!this.weather) return "--";
+      if (!this.hasSunData) return "--";
       
       const sunrise = this.sunriseTime;
       const sunset = this.sunsetTime;

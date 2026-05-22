@@ -12,34 +12,153 @@
           <span>{{ layer.label }}</span>
         </button>
       </div>
+      
+      <!-- Temperature unit toggle (only shown for temperature layer) -->
+      <div v-if="activeLayer === 'temp'" class="temp-controls">
+        <div class="unit-toggle">
+          <button 
+            :class="['unit-btn', { active: tempUnit === 'C' }]"
+            @click="setTempUnit('C')"
+          >&deg;C</button>
+          <button 
+            :class="['unit-btn', { active: tempUnit === 'F' }]"
+            @click="setTempUnit('F')"
+          >&deg;F</button>
+        </div>
+        <label class="isotherm-toggle">
+          <input type="checkbox" v-model="showIsotherms" @change="toggleIsotherms">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Isotherms</span>
+        </label>
+      </div>
     </div>
     
     <div id="weather-map" class="map-container"></div>
     
     <div class="map-legend">
       <div v-if="activeLayer === 'temp'" class="legend-temp">
-        <div class="legend-title">Temperature (°C)</div>
-        <div class="legend-colors">
-          <div class="color-item" style="background: #4575b4;">-40</div>
-          <div class="color-item" style="background: #74add1;">-30</div>
-          <div class="color-item" style="background: #abd9e9;">-20</div>
-          <div class="color-item" style="background: #e0f3f8;">-10</div>
-          <div class="color-item" style="background: #ffffbf;">0</div>
-          <div class="color-item" style="background: #fee090;">10</div>
-          <div class="color-item" style="background: #fdae61;">20</div>
-          <div class="color-item" style="background: #f46d43;">30</div>
-          <div class="color-item" style="background: #d73027;">40</div>
+        <div class="legend-header">
+          <div class="legend-title">Temperature ({{ tempUnit === 'C' ? 'C' : 'F' }})</div>
+          <div class="legend-subtitle">
+            <span class="cold-indicator"><i class="fas fa-snowflake"></i> Cold</span>
+            <span class="moderate-indicator"><i class="fas fa-sun"></i> Moderate</span>
+            <span class="hot-indicator"><i class="fas fa-fire"></i> Hot</span>
+          </div>
+        </div>
+        <div class="legend-colors temp-gradient">
+          <!-- Cold zone: Blue/Purple -->
+          <div class="color-item cold" style="background: #313695;">{{ formatTemp(-40) }}</div>
+          <div class="color-item cold" style="background: #4575b4;">{{ formatTemp(-30) }}</div>
+          <div class="color-item cold" style="background: #74add1;">{{ formatTemp(-20) }}</div>
+          <div class="color-item cold" style="background: #abd9e9;">{{ formatTemp(-10) }}</div>
+          <!-- Moderate zone: Green/Yellow -->
+          <div class="color-item moderate" style="background: #e0f3f8;">{{ formatTemp(0) }}</div>
+          <div class="color-item moderate" style="background: #ffffbf;">{{ formatTemp(10) }}</div>
+          <div class="color-item moderate" style="background: #a6d96a;">{{ formatTemp(15) }}</div>
+          <!-- Hot zone: Orange/Red -->
+          <div class="color-item hot" style="background: #fee090;">{{ formatTemp(20) }}</div>
+          <div class="color-item hot" style="background: #fdae61;">{{ formatTemp(25) }}</div>
+          <div class="color-item hot" style="background: #f46d43;">{{ formatTemp(30) }}</div>
+          <div class="color-item hot" style="background: #d73027;">{{ formatTemp(35) }}</div>
+          <div class="color-item hot" style="background: #a50026;">{{ formatTemp(40) }}</div>
+        </div>
+        <div v-if="showIsotherms" class="isotherm-info">
+          <i class="fas fa-info-circle"></i>
+          <span>Isotherms connect areas of equal temperature</span>
         </div>
       </div>
       
       <div v-else-if="activeLayer === 'precipitation'" class="legend-precip">
-        <div class="legend-title">Precipitation (mm/h)</div>
-        <div class="legend-colors">
-          <div class="color-item" style="background: #ffffff;">0</div>
-          <div class="color-item" style="background: #d0d1e6;">0.5</div>
-          <div class="color-item" style="background: #74add1;">2</div>
-          <div class="color-item" style="background: #4575b4;">10</div>
-          <div class="color-item" style="background: #313695;">30</div>
+        <div class="legend-header">
+          <div class="legend-title">Precipitation (mm/h)</div>
+          <div class="legend-subtitle">
+            <span class="light-rain-indicator"><i class="fas fa-cloud-rain"></i> Light</span>
+            <span class="moderate-rain-indicator"><i class="fas fa-cloud-showers-heavy"></i> Moderate</span>
+            <span class="heavy-rain-indicator"><i class="fas fa-cloud-bolt"></i> Heavy</span>
+            <span class="snow-indicator"><i class="fas fa-snowflake"></i> Snow</span>
+          </div>
+        </div>
+        <div class="legend-colors precip-gradient">
+          <!-- No precipitation -->
+          <div class="color-item" style="background: rgba(225, 243, 255, 0.2);">0</div>
+          <!-- Light rain: Light blue/green -->
+          <div class="color-item light-precip" style="background: #c6e6f7;">0.1</div>
+          <div class="color-item light-precip" style="background: #96d4f0;">0.5</div>
+          <div class="color-item light-precip" style="background: #6bc1e8;">1</div>
+          <!-- Moderate rain: Medium blue -->
+          <div class="color-item moderate-precip" style="background: #4ba8db;">2</div>
+          <div class="color-item moderate-precip" style="background: #3498db;">5</div>
+          <!-- Heavy rain: Dark blue/purple -->
+          <div class="color-item heavy-precip" style="background: #2980b9;">10</div>
+          <div class="color-item heavy-precip" style="background: #8e44ad;">20</div>
+          <div class="color-item heavy-precip" style="background: #6c3483;">30</div>
+          <div class="color-item heavy-precip" style="background: #4a235a;">50+</div>
+        </div>
+        <div class="precip-symbols">
+          <div class="symbol-item">
+            <i class="fas fa-tint" style="color: #6bc1e8;"></i>
+            <span>Drizzle</span>
+          </div>
+          <div class="symbol-item">
+            <i class="fas fa-cloud-rain" style="color: #3498db;"></i>
+            <span>Rain</span>
+          </div>
+          <div class="symbol-item">
+            <i class="fas fa-cloud-showers-heavy" style="color: #8e44ad;"></i>
+            <span>Heavy</span>
+          </div>
+          <div class="symbol-item">
+            <i class="fas fa-snowflake" style="color: #85c1e9;"></i>
+            <span>Snow</span>
+          </div>
+        </div>
+        <div class="radar-info">
+          <i class="fas fa-broadcast-tower"></i>
+          <span>Radar shows intensity and movement of precipitation</span>
+        </div>
+      </div>
+      
+      <div v-else-if="activeLayer === 'pressure'" class="legend-pressure">
+        <div class="legend-header">
+          <div class="legend-title">Atmospheric Pressure (hPa)</div>
+          <div class="legend-subtitle">
+            <span class="high-pressure-indicator"><span class="pressure-symbol high">H</span> High Pressure</span>
+            <span class="low-pressure-indicator"><span class="pressure-symbol low">L</span> Low Pressure</span>
+          </div>
+        </div>
+        <div class="legend-colors pressure-gradient">
+          <!-- Low pressure: Purple/Red -->
+          <div class="color-item low-press" style="background: #7b241c;">950</div>
+          <div class="color-item low-press" style="background: #a93226;">970</div>
+          <div class="color-item low-press" style="background: #cb4335;">985</div>
+          <!-- Normal pressure: Yellow/Green -->
+          <div class="color-item normal-press" style="background: #f4d03f;">1000</div>
+          <div class="color-item normal-press" style="background: #82e0aa;">1013</div>
+          <div class="color-item normal-press" style="background: #58d68d;">1020</div>
+          <!-- High pressure: Blue -->
+          <div class="color-item high-press" style="background: #5dade2;">1030</div>
+          <div class="color-item high-press" style="background: #3498db;">1040</div>
+          <div class="color-item high-press" style="background: #2874a6;">1050</div>
+        </div>
+        <div class="pressure-systems">
+          <div class="pressure-system high-system">
+            <span class="pressure-symbol-large high">H</span>
+            <div class="system-info">
+              <strong>High Pressure</strong>
+              <span>Clear, calm weather</span>
+            </div>
+          </div>
+          <div class="pressure-system low-system">
+            <span class="pressure-symbol-large low">L</span>
+            <div class="system-info">
+              <strong>Low Pressure</strong>
+              <span>Clouds, wind, rain</span>
+            </div>
+          </div>
+        </div>
+        <div class="isobar-info">
+          <i class="fas fa-grip-lines"></i>
+          <span>Isobars connect areas of equal atmospheric pressure</span>
         </div>
       </div>
       
@@ -71,7 +190,7 @@
     <div class="map-footer">
       <span>
         <i class="fas fa-info-circle me-1"></i>
-        Map data © OpenWeatherMap
+        Map data &copy; OpenWeatherMap
       </span>
       <span>Last updated: {{ lastUpdated }}</span>
     </div>
@@ -89,16 +208,39 @@ export default {
     const store = useStore();
     let map = null;
     let tileLayer = null;
+    let isothermLayer = null;
     
     const activeLayer = ref('temp');
     const mapInitialized = ref(false);
+    const tempUnit = ref('C');
+    const showIsotherms = ref(false);
     
     const layerOptions = [
       { id: 'temp', label: 'Temperature', icon: 'fas fa-temperature-high' },
       { id: 'precipitation', label: 'Precipitation', icon: 'fas fa-cloud-rain' },
+      { id: 'pressure', label: 'Pressure', icon: 'fas fa-tachometer-alt' },
       { id: 'clouds', label: 'Clouds', icon: 'fas fa-cloud' },
       { id: 'wind', label: 'Wind', icon: 'fas fa-wind' }
     ];
+    
+    const showIsobars = ref(false);
+    
+    // Convert Celsius to Fahrenheit
+    const celsiusToFahrenheit = (celsius) => {
+      return Math.round((celsius * 9/5) + 32);
+    };
+    
+    // Format temperature based on selected unit
+    const formatTemp = (tempC) => {
+      if (tempUnit.value === 'F') {
+        return celsiusToFahrenheit(tempC);
+      }
+      return tempC;
+    };
+    
+    const setTempUnit = (unit) => {
+      tempUnit.value = unit;
+    };
     
     const lastUpdated = computed(() => {
       return new Date().toLocaleTimeString();
@@ -114,6 +256,14 @@ export default {
       // Import Leaflet dynamically to avoid SSR issues
       import('leaflet').then((L) => {
         if (!document.getElementById('weather-map')) return;
+
+        // Fix default marker icon 404s caused by webpack asset hashing
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        });
         
         // Create map centered at current location or default to New York
         const defaultLat = 40.7128;
@@ -169,6 +319,9 @@ export default {
         case 'clouds':
           layerUrl = `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${API_KEY}`;
           break;
+        case 'pressure':
+          layerUrl = `https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=${API_KEY}`;
+          break;
         case 'wind':
           layerUrl = `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`;
           break;
@@ -189,9 +342,48 @@ export default {
     const setActiveLayer = (layerId) => {
       activeLayer.value = layerId;
       
+      // Remove isotherms when switching away from temperature
+      if (layerId !== 'temp' && isothermLayer && map) {
+        map.removeLayer(isothermLayer);
+        isothermLayer = null;
+        showIsotherms.value = false;
+      }
+      
+      // Reset isobars when switching away from pressure
+      if (layerId !== 'pressure') {
+        showIsobars.value = false;
+      }
+      
       if (mapInitialized.value) {
         addWeatherLayer(layerId);
       }
+    };
+    
+    // Toggle isotherms (contour lines connecting equal temperatures)
+    const toggleIsotherms = () => {
+      if (!map) return;
+      
+      import('leaflet').then((L) => {
+        if (showIsotherms.value) {
+          // Add isotherm layer - using a pressure layer as a proxy for contour lines
+          // In production, you'd use actual isotherm data
+          const API_KEY = process.env.VUE_APP_WEATHER_API_KEY || "ffebb6d220be97c63c7cf84998a7af7f";
+          isothermLayer = L.tileLayer(
+            `https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
+            {
+              attribution: 'Isotherms &copy; OpenWeatherMap',
+              maxZoom: 18,
+              opacity: 0.4
+            }
+          ).addTo(map);
+        } else {
+          // Remove isotherm layer
+          if (isothermLayer) {
+            map.removeLayer(isothermLayer);
+            isothermLayer = null;
+          }
+        }
+      });
     };
     
     // Watch for location changes to update map center
@@ -228,13 +420,22 @@ export default {
         map = null;
         mapInitialized.value = false;
       }
+      if (isothermLayer) {
+        isothermLayer = null;
+      }
     });
     
     return {
       activeLayer,
       layerOptions,
       lastUpdated,
-      setActiveLayer
+      setActiveLayer,
+      tempUnit,
+      setTempUnit,
+      formatTemp,
+      showIsotherms,
+      toggleIsotherms,
+      showIsobars
     };
   }
 };
@@ -263,6 +464,94 @@ export default {
   padding: 1.25rem;
   border-bottom: 2px solid rgba(203, 213, 225, 0.2);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(249, 250, 251, 0.3) 100%);
+}
+
+/* Temperature-specific controls */
+.temp-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(203, 213, 225, 0.3);
+}
+
+.unit-toggle {
+  display: flex;
+  background: rgba(243, 244, 246, 0.8);
+  border-radius: 20px;
+  padding: 3px;
+  border: 1px solid rgba(203, 213, 225, 0.4);
+}
+
+.unit-btn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  background: transparent;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.unit-btn:hover {
+  color: #4b5563;
+}
+
+.unit-btn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.isotherm-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.isotherm-toggle input {
+  display: none;
+}
+
+.toggle-slider {
+  width: 40px;
+  height: 22px;
+  background: rgba(203, 213, 225, 0.6);
+  border-radius: 11px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.isotherm-toggle input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.isotherm-toggle input:checked + .toggle-slider::after {
+  transform: translateX(18px);
+}
+
+.toggle-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4b5563;
 }
 
 .layer-selectors {
@@ -330,12 +619,49 @@ export default {
   border-top: 2px solid rgba(203, 213, 225, 0.2);
 }
 
+.legend-header {
+  margin-bottom: 0.75rem;
+}
+
 .legend-title {
   font-size: 0.85rem;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.4rem;
   letter-spacing: 0.3px;
+}
+
+.legend-subtitle {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+}
+
+.cold-indicator {
+  color: #4575b4;
+}
+
+.cold-indicator i {
+  color: #4575b4;
+  margin-right: 0.25rem;
+}
+
+.moderate-indicator {
+  color: #66bb6a;
+}
+
+.moderate-indicator i {
+  color: #ffca28;
+  margin-right: 0.25rem;
+}
+
+.hot-indicator {
+  color: #d73027;
+}
+
+.hot-indicator i {
+  color: #f46d43;
+  margin-right: 0.25rem;
 }
 
 .legend-colors {
@@ -346,6 +672,10 @@ export default {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.legend-colors.temp-gradient {
+  height: 32px;
 }
 
 .color-item {
@@ -360,9 +690,262 @@ export default {
   transition: all 0.2s ease;
 }
 
+.color-item.cold {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.color-item.hot {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 .color-item:hover {
   transform: scale(1.05);
   z-index: 1;
+}
+
+.isotherm-info {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.isotherm-info i {
+  color: #6366f1;
+}
+
+/* Precipitation Legend Styles */
+.legend-precip .legend-subtitle {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.light-rain-indicator {
+  color: #6bc1e8;
+}
+
+.light-rain-indicator i {
+  color: #6bc1e8;
+  margin-right: 0.25rem;
+}
+
+.moderate-rain-indicator {
+  color: #3498db;
+}
+
+.moderate-rain-indicator i {
+  color: #3498db;
+  margin-right: 0.25rem;
+}
+
+.heavy-rain-indicator {
+  color: #8e44ad;
+}
+
+.heavy-rain-indicator i {
+  color: #8e44ad;
+  margin-right: 0.25rem;
+}
+
+.snow-indicator {
+  color: #85c1e9;
+}
+
+.snow-indicator i {
+  color: #85c1e9;
+  margin-right: 0.25rem;
+}
+
+.legend-colors.precip-gradient {
+  height: 32px;
+}
+
+.color-item.light-precip {
+  color: #1a5276;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.color-item.moderate-precip {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.color-item.heavy-precip {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.precip-symbols {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(52, 152, 219, 0.08);
+  border-radius: 8px;
+}
+
+.symbol-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: #4b5563;
+}
+
+.symbol-item i {
+  font-size: 1rem;
+}
+
+.radar-info {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(52, 152, 219, 0.1);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.radar-info i {
+  color: #3498db;
+}
+
+/* Pressure System Legend Styles */
+.legend-pressure .legend-subtitle {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.high-pressure-indicator,
+.low-pressure-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pressure-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.pressure-symbol.high {
+  background: linear-gradient(135deg, #3498db, #2874a6);
+  color: white;
+}
+
+.pressure-symbol.low {
+  background: linear-gradient(135deg, #e74c3c, #a93226);
+  color: white;
+}
+
+.legend-colors.pressure-gradient {
+  height: 32px;
+}
+
+.color-item.low-press {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.color-item.normal-press {
+  color: #1a5276;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.color-item.high-press {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.pressure-systems {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(52, 73, 94, 0.06);
+  border-radius: 10px;
+  gap: 1rem;
+}
+
+.pressure-system {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pressure-symbol-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pressure-symbol-large.high {
+  background: linear-gradient(135deg, #3498db, #2874a6);
+  color: white;
+}
+
+.pressure-symbol-large.low {
+  background: linear-gradient(135deg, #e74c3c, #a93226);
+  color: white;
+}
+
+.system-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.system-info strong {
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+.system-info span {
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.isobar-info {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(52, 73, 94, 0.08);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.isobar-info i {
+  color: #5d6d7e;
 }
 
 .map-footer {
@@ -372,7 +955,7 @@ export default {
   align-items: center;
   font-size: 0.8rem;
   color: #6b7280;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.8) 100());
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.8) 100%);
   border-top: 2px solid rgba(203, 213, 225, 0.2);
 }
 
@@ -391,6 +974,31 @@ export default {
   .map-controls {
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%);
     border-bottom-color: rgba(51, 65, 85, 0.3);
+  }
+  
+  .temp-controls {
+    border-top-color: rgba(51, 65, 85, 0.4);
+  }
+  
+  .unit-toggle {
+    background: rgba(51, 65, 85, 0.8);
+    border-color: rgba(71, 85, 105, 0.4);
+  }
+  
+  .unit-btn {
+    color: #94a3b8;
+  }
+  
+  .unit-btn:hover {
+    color: #cbd5e1;
+  }
+  
+  .toggle-slider {
+    background: rgba(71, 85, 105, 0.6);
+  }
+  
+  .toggle-label {
+    color: #cbd5e1;
   }
   
   .layer-btn {
@@ -417,6 +1025,54 @@ export default {
   
   .legend-title {
     color: #e2e8f0;
+  }
+  
+  .legend-subtitle .cold-indicator,
+  .legend-subtitle .moderate-indicator,
+  .legend-subtitle .hot-indicator {
+    opacity: 0.9;
+  }
+  
+  .legend-subtitle .light-rain-indicator,
+  .legend-subtitle .moderate-rain-indicator,
+  .legend-subtitle .heavy-rain-indicator,
+  .legend-subtitle .snow-indicator {
+    opacity: 0.9;
+  }
+  
+  .isotherm-info {
+    background: rgba(99, 102, 241, 0.2);
+    color: #cbd5e1;
+  }
+  
+  .precip-symbols {
+    background: rgba(52, 152, 219, 0.15);
+  }
+  
+  .symbol-item {
+    color: #cbd5e1;
+  }
+  
+  .radar-info {
+    background: rgba(52, 152, 219, 0.2);
+    color: #cbd5e1;
+  }
+  
+  .pressure-systems {
+    background: rgba(52, 73, 94, 0.15);
+  }
+  
+  .system-info strong {
+    color: #e2e8f0;
+  }
+  
+  .system-info span {
+    color: #94a3b8;
+  }
+  
+  .isobar-info {
+    background: rgba(52, 73, 94, 0.2);
+    color: #cbd5e1;
   }
   
   .map-footer {
@@ -450,6 +1106,24 @@ export default {
   .layer-btn i {
     font-size: 1.2rem;
     margin: 0;
+  }
+  
+  .temp-controls {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .legend-subtitle {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .legend-colors.temp-gradient {
+    height: 24px;
+  }
+  
+  .color-item {
+    font-size: 0.6rem;
   }
 }
 </style>

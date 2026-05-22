@@ -1,68 +1,51 @@
 <template>
-  <div class="weather-highlights-container p-4">
-    <!-- Show content only when weather data is available -->
-    <div v-if="weather">
-      
-      <!-- Weather Highlights Cards -->
+  <div class="weather-highlights-container">
+    <div v-if="weather" class="highlights-shell">
       <div class="highlights-grid">
-        <div 
-          v-for="(highlight, index) in highlights" 
-          :key="index"
-          class="highlight-card"
-        >
+        <article v-for="highlight in highlights" :key="highlight.title" class="highlight-card">
           <div class="highlight-icon">
             <i :class="highlight.icon"></i>
           </div>
           <div class="highlight-content">
-            <h3 class="highlight-title">{{ highlight.title }}</h3>
-            <div class="highlight-value">{{ highlight.value }}</div>
+            <span class="highlight-title">{{ highlight.title }}</span>
+            <strong class="highlight-value">{{ highlight.value }}</strong>
           </div>
-        </div>
+        </article>
       </div>
 
-      <!-- UV Index and Visibility -->
-      <div class="additional-data">
-        <div class="additional-card">
-          <div class="additional-header">
-            <i class="fas fa-eye me-2"></i>
-            <h3>Visibility</h3>
+      <div class="condition-grid">
+        <article class="condition-card">
+          <div class="condition-head">
+            <i class="fas fa-eye"></i>
+            <span>Visibility</span>
           </div>
-          <div class="additional-value">
-            {{ weather.visibility ? (weather.visibility / 1000).toFixed(1) + ' km' : 'N/A' }}
+          <strong>{{ visibilityLabel }}</strong>
+          <div class="meter">
+            <span :style="{ width: `${visibilityPercent}%` }"></span>
           </div>
-          <div class="additional-scale">
-            <div class="scale-bar">
-              <div class="scale-fill" :style="{ width: `${Math.min(100, (weather.visibility || 0) / 100)}%` }"></div>
-            </div>
-            <div class="scale-labels">
-              <span>Poor</span>
-              <span>Good</span>
-              <span>Excellent</span>
-            </div>
+          <div class="meter-labels">
+            <span>Poor</span>
+            <span>Clear</span>
           </div>
-        </div>
-        
-        <div class="additional-card">
-          <div class="additional-header">
-            <i class="fas fa-sun me-2"></i>
-            <h3>UV Index</h3>
+        </article>
+
+        <article class="condition-card">
+          <div class="condition-head">
+            <i class="fas fa-sun"></i>
+            <span>UV Index</span>
           </div>
-          <div class="additional-value">Moderate</div>
-          <div class="additional-scale">
-            <div class="scale-bar uv-bar">
-              <div class="scale-fill" style="width: 40%"></div>
-            </div>
-            <div class="scale-labels">
-              <span>Low</span>
-              <span>Medium</span>
-              <span>High</span>
-            </div>
+          <strong>{{ uvLabel }}</strong>
+          <div class="meter uv-meter">
+            <span :style="{ width: `${uvPercent}%` }"></span>
           </div>
-        </div>
+          <div class="meter-labels">
+            <span>Low</span>
+            <span>High</span>
+          </div>
+        </article>
       </div>
     </div>
 
-    <!-- Loading state -->
     <div v-else class="loading-state">
       <div class="loading-spinner"></div>
       <p>Loading weather highlights...</p>
@@ -77,233 +60,238 @@ export default {
     weather() {
       return this.$store.state.weather;
     },
-    formattedSunrise() {
-      if (!this.weather) return "--";
-      return this.formatTime(this.weather.sys.sunrise);
-    },
-    formattedSunset() {
-      if (!this.weather) return "--";
-      return this.formatTime(this.weather.sys.sunset);
+    uvIndex() {
+      return this.$store.getters.uvIndex || 0;
     },
     highlights() {
       if (!this.weather) return [];
+      const degree = String.fromCharCode(176);
       return [
         {
           title: "Humidity",
           value: `${this.weather.main.humidity}%`,
-          icon: "fa-solid fa-droplet fa-3x text-primary",
+          icon: "fas fa-droplet",
         },
         {
           title: "Pressure",
           value: `${this.weather.main.pressure} hPa`,
-          icon: "fa-solid fa-gauge fa-3x text-success",
+          icon: "fas fa-gauge-high",
         },
         {
-          title: "Wind Speed",
-          value: `${this.weather.wind.speed} m/s`,
-          icon: "fa-solid fa-wind fa-3x text-info",
+          title: "Wind",
+          value: `${Number(this.weather.wind.speed || 0).toFixed(1)} m/s`,
+          icon: "fas fa-wind",
         },
         {
           title: "Feels Like",
-          value: `${Math.round(this.weather.main.feels_like)}°C`,
-          icon: "fa-solid fa-temperature-high fa-3x text-danger",
+          value: `${Math.round(this.weather.main.feels_like)}${degree}C`,
+          icon: "fas fa-temperature-high",
+        },
+        {
+          title: "Cloud Cover",
+          value: `${this.weather.clouds?.all ?? 0}%`,
+          icon: "fas fa-cloud",
+        },
+        {
+          title: "Condition",
+          value: this.weather.weather?.[0]?.main || "N/A",
+          icon: "fas fa-cloud-sun",
         },
       ];
     },
+    visibilityKm() {
+      if (!this.weather?.visibility) return 0;
+      return this.weather.visibility / 1000;
+    },
+    visibilityLabel() {
+      if (!this.weather?.visibility) return "N/A";
+      return `${this.visibilityKm.toFixed(1)} km`;
+    },
+    visibilityPercent() {
+      return Math.min(100, Math.max(0, (this.visibilityKm / 10) * 100));
+    },
+    uvLabel() {
+      const value = Number(this.uvIndex).toFixed(1);
+      if (this.uvIndex <= 2) return `${value} Low`;
+      if (this.uvIndex <= 5) return `${value} Moderate`;
+      if (this.uvIndex <= 7) return `${value} High`;
+      if (this.uvIndex <= 10) return `${value} Very High`;
+      return `${value} Extreme`;
+    },
+    uvPercent() {
+      return Math.min(100, Math.max(0, (this.uvIndex / 11) * 100));
+    },
   },
-  methods: {
-    formatTime(timestamp) {
-      if (!this.weather || !timestamp) return "--";
-      return new Date(timestamp * 1000 + this.weather.timezone * 1000).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-  }
 };
 </script>
 
 <style scoped>
 .weather-highlights-container {
   width: 100%;
-  margin-bottom: 20px;
+  padding: 18px;
 }
 
-.section-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #334155;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
+.highlights-shell {
+  display: grid;
+  gap: 14px;
 }
 
-.section-title i {
-  color: #10b981;
-}
-
-/* Highlights Grid */
 .highlights-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.highlight-card,
+.condition-card {
+  border: 1px solid var(--border, rgba(52, 116, 140, 0.16));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--bg-card-alt, #f7fbfc);
 }
 
 .highlight-card {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  display: flex;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
   align-items: center;
-  transition: all 0.3s ease;
-}
-
-.highlight-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  padding: 14px;
 }
 
 .highlight-icon {
-  margin-right: 20px;
-  font-size: 0.8rem;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--accent-light, #e4f1f5);
+  color: var(--accent-dark, #24586d);
 }
 
 .highlight-icon i {
-  opacity: 0.9;
+  font-size: 16px;
 }
 
 .highlight-content {
-  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
 }
 
-.highlight-title {
-  font-size: 1rem;
-  color: #64748b;
-  margin: 0 0 5px 0;
-  font-weight: 500;
+.highlight-title,
+.condition-head,
+.meter-labels {
+  color: var(--text-muted, #899aa3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .highlight-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0f172a;
+  min-width: 0;
+  color: var(--text-primary, #17242b);
+  font-size: 18px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
-/* Additional Data Styling */
-.additional-data {
+.condition-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.additional-card {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+.condition-card {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
 }
 
-.additional-header {
+.condition-head {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  gap: 8px;
 }
 
-.additional-header i {
-  font-size: 1.2rem;
-  color: #10b981;
+.condition-head i {
+  color: var(--accent-dark, #24586d);
 }
 
-.additional-header h3 {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0;
-  color: #334155;
+.condition-card strong {
+  color: var(--text-primary, #17242b);
+  font-size: 24px;
+  line-height: 1;
 }
 
-.additional-value {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 15px;
-}
-
-.additional-scale {
-  margin-top: 10px;
-}
-
-.scale-bar {
+.meter {
   height: 8px;
-  background: #e2e8f0;
-  border-radius: 4px;
+  border-radius: 999px;
   overflow: hidden;
+  background: rgba(52, 116, 140, 0.12);
 }
 
-.scale-fill {
+.meter span {
+  display: block;
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
-  border-radius: 4px;
+  border-radius: inherit;
+  background: var(--accent, #34748c);
+  transition: width 0.4s ease;
 }
 
-.uv-bar .scale-fill {
-  background: linear-gradient(90deg, #10b981, #eab308);
+.uv-meter span {
+  background: #d89b3d;
 }
 
-.scale-labels {
+.meter-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 5px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-/* Loading state */
 .loading-state {
-  width: 100%;
-  height: 300px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 20px;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: var(--text-secondary, #50646f);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(16, 185, 129, 0.2);
-  border-top-color: #10b981;
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(52, 116, 140, 0.16);
+  border-top-color: var(--accent, #34748c);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+}
+
+.loading-state p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* Responsive adjustments */
-@media (max-width: 992px) {
+@media (max-width: 900px) {
   .highlights-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .additional-data {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 576px) {
-  .highlights-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 620px) {
+  .weather-highlights-container {
+    padding: 14px;
   }
-  
-  .highlight-card {
-    padding: 15px;
+
+  .highlights-grid,
+  .condition-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

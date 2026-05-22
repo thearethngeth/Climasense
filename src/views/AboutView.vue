@@ -1,693 +1,647 @@
-<template>
-  <div class="about-view">
-    <div class="about-container">
-      <!-- Hero Section -->
-      <section class="about-hero" data-aos="fade-up">
-        <div class="hero-content">
-          <h1 class="about-title">About <span>Weather</span><span class="accent">App</span></h1>
-          <p class="about-subtitle">Your comprehensive weather intelligence platform</p>
-          <div class="hero-divider"></div>
-          <p class="hero-description">
-            WeatherApp provides accurate, real-time weather information with an intuitive interface.
-            Stay informed about current conditions, forecasts, and environmental metrics for any location worldwide.
-          </p>
-          
-          <div class="team-info">
-            <h3 class="team-heading">Our Team</h3>
-            <p class="team-intro">Developed by Year 3 students at Royal University of Phnom Penh (RUPP), Cambodia as part of our project practicum:</p>
-            
-            <div class="team-members">
-              <div class="team-member">
-                <div class="member-icon"><i class="fas fa-code"></i></div>
-                <div class="member-details">
-                  <h4>Chhem Seavthek</h4>
-                  <p>Team Leader & Lead Coder</p>
-                </div>
-              </div>
-              
-              <div class="team-member">
-                <div class="member-icon"><i class="fas fa-cloud-download-alt"></i></div>
-                <div class="member-details">
-                  <h4>Chun Keman</h4>
-                  <p>API Specialist</p>
-                </div>
-              </div>
-              
-              <div class="team-member">
-                <div class="member-icon"><i class="fas fa-paint-brush"></i></div>
-                <div class="member-details">
-                  <h4>Ngeth Theareth</h4>
-                  <p>UI/UX Designer</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="hero-image" data-aos="zoom-in" data-aos-delay="300">
-          <i class="hero-icon fas fa-cloud-sun-rain"></i>
-        </div>
-      </section>
+﻿<template>
+  <main class="about-page">
+    <section class="about-hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Project overview</span>
+        <h1>About ClimaSense</h1>
+        <p class="hero-lede">
+          A minimalist weather intelligence dashboard built for clear, everyday
+          decisions around current conditions, forecasts, air quality, UV,
+          precipitation, visibility, and local planning.
+        </p>
 
-      <!-- Features Section -->
-      <section class="features-section" data-aos="fade-up" data-aos-delay="100">
-        <h2 class="section-title">Premium Features</h2>
-        <div class="features-grid">
-          <div class="feature-card" data-aos="fade-up" data-aos-delay="150">
-            <div class="feature-icon"><i class="fas fa-clock"></i></div>
-            <h3>Real-time Updates</h3>
-            <p>Get the latest weather data with frequent updates for accurate information.</p>
-          </div>
-          
-          <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
-            <div class="feature-icon"><i class="fas fa-calendar-day"></i></div>
-            <h3>5-Day Forecast</h3>
-            <p>Plan your week with detailed 5-day weather predictions and trends.</p>
-          </div>
-          
-          <div class="feature-card" data-aos="fade-up" data-aos-delay="250">
-            <div class="feature-icon"><i class="fas fa-wind"></i></div>
-            <h3>Air Quality Index</h3>
-            <p>Monitor air pollution levels and receive health recommendations.</p>
-          </div>
-          
-          <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
-            <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
-            <h3>Weather Highlights</h3>
-            <p>Track humidity, pressure, visibility, and other key weather metrics.</p>
-          </div>
-          
-          <div class="feature-card" data-aos="fade-up" data-aos-delay="350">
-            <div class="feature-icon"><i class="fas fa-hourglass-half"></i></div>
-            <h3>Hourly Forecast</h3>
-            <p>View hour-by-hour predictions to plan your day with precision.</p>
-          </div>
-          
-          <div class="feature-card" data-aos="fade-up" data-aos-delay="400">
-            <div class="feature-icon"><i class="fas fa-map-marker-alt"></i></div>
-            <h3>Location-based</h3>
-            <p>Get weather data for your current location or search for any place.</p>
-          </div>
+        <div class="hero-actions" aria-label="Project highlights">
+          <span><i class="fas fa-cloud-sun"></i> Live weather system</span>
+          <span><i class="fas fa-map-marker-alt"></i> Location based</span>
+          <span><i class="fas fa-graduation-cap"></i> RUPP practicum</span>
         </div>
-      </section>
+      </div>
 
-      <!-- Technology Stack Section -->
-      <section class="tech-section" data-aos="fade-up" data-aos-delay="150">
-        <h2 class="section-title">Our Technology Stack</h2>
-        <div class="tech-cards">
-          <div class="tech-card" data-aos="flip-left" data-aos-delay="200">
-            <div class="tech-logo">
-              <i class="fab fa-vuejs"></i>
-            </div>
-            <h4>Vue.js 3</h4>
-            <p>Modern front-end framework powering our reactive user interface</p>
-          </div>
-          
-          <div class="tech-card" data-aos="flip-left" data-aos-delay="250">
-            <div class="tech-logo">
-              <i class="fas fa-database"></i>
-            </div>
-            <h4>Vuex</h4>
-            <p>State management for efficient data handling across components</p>
-          </div>
-          
-          <div class="tech-card" data-aos="flip-left" data-aos-delay="300">
-            <div class="tech-logo">
-              <i class="fas fa-cloud-download-alt"></i>
-            </div>
-            <h4>OpenWeather API</h4>
-            <p>Reliable weather data source with global coverage</p>
-          </div>
-          
-          <div class="tech-card" data-aos="flip-left" data-aos-delay="350">
-            <div class="tech-logo">
-              <i class="fab fa-bootstrap"></i>
-            </div>
-            <h4>Bootstrap</h4>
-            <p>Responsive design framework ensuring cross-device compatibility</p>
-          </div>
+      <aside class="station-card" aria-label="Weather station summary">
+        <div class="station-orbit">
+          <i class="fas fa-cloud-sun-rain"></i>
         </div>
-      </section>
+        <div class="station-reading">
+          <span>System focus</span>
+          <strong>Weather clarity</strong>
+        </div>
+        <div class="station-meter">
+          <span></span>
+        </div>
+      </aside>
+    </section>
 
-      <!-- Data Sources Section -->
-      <section class="data-section" data-aos="fade-up" data-aos-delay="200">
-        <h2 class="section-title">Data Sources & Project Information</h2>
-        <div class="data-content">
-          <p>
-            WeatherApp sources its data from the OpenWeather API, which collects information from meteorological 
-            broadcasts, weather stations, radar data, satellite observations, and other official weather data providers.
-            This ensures our users receive accurate and reliable weather information.
-          </p>
-          
-          <div class="project-info" data-aos="fade-up" data-aos-delay="150">
-            <h3>Project Practicum Details</h3>
-            <p>
-              This weather application was developed as part of the Year 3 project practicum at 
-              <strong>Royal University of Phnom Penh (RUPP)</strong>, Cambodia. The project aims to demonstrate 
-              the practical implementation of modern web development technologies and API integration 
-              while creating a useful tool for weather monitoring.
-            </p>
-          </div>
-          
-          <div class="data-info" data-aos="fade-right" data-aos-delay="250">
-            <div class="info-item">
-              <div class="info-icon"><i class="fas fa-broadcast-tower"></i></div>
-              <div class="info-text">
-                <h4>Weather Stations</h4>
-                <p>Data from thousands of weather stations worldwide</p>
-              </div>
-            </div>
-            
-            <div class="info-item" data-aos="fade-right" data-aos-delay="300">
-              <div class="info-icon"><i class="fas fa-satellite"></i></div>
-              <div class="info-text">
-                <h4>Satellite Imagery</h4>
-                <p>Cloud patterns and atmospheric conditions from space</p>
-              </div>
-            </div>
-            
-            <div class="info-item" data-aos="fade-right" data-aos-delay="350">
-              <div class="info-icon"><i class="fas fa-tachometer-alt"></i></div>
-              <div class="info-text">
-                <h4>Meteorological Models</h4>
-                <p>Advanced prediction models for forecast accuracy</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section class="team-section">
+      <div class="section-heading">
+        <span class="eyebrow">Student team</span>
+        <h2>Built by two Year 4 students</h2>
+        <p>
+          Developed at Royal University of Phnom Penh (RUPP), Cambodia, as a
+          project practicum focused on practical web development, API
+          integration, and user-centered weather visualization.
+        </p>
+      </div>
 
-      <!-- Contact/Footer Section -->
-      <section class="about-footer" data-aos="fade-up" data-aos-delay="250">
-        <div class="footer-content">
-          <h2>Stay Connected</h2>
-          <p>
-            We're constantly improving WeatherApp with new features and data sources.
-            Follow us for updates or reach out with feedback and suggestions.
-          </p>
-          <div class="social-links">
-            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-            <a href="https://github.com/SeavThek168/pp-y3-weatherapp" class="social-link"><i class="fab fa-github"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+      <div class="team-grid">
+        <article
+          v-for="student in students"
+          :key="student.name"
+          class="student-card"
+        >
+          <div class="student-mark">
+            <i :class="student.icon"></i>
           </div>
-          
-          <div class="team-recognition">
-            <p>Created by RUPP Year 3 Students:</p>
-            <p class="team-names">Chhem Seavthek • Chun Keman • Ngeth Theareth</p>
+          <div>
+            <span class="student-kicker">{{ student.kicker }}</span>
+            <h3>{{ student.name }}</h3>
+            <p>{{ student.role }}</p>
           </div>
-          
-          <p class="copyright">© 2025 WeatherApp. All rights reserved.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="feature-section">
+      <div class="section-heading compact">
+        <span class="eyebrow">What it does</span>
+        <h2>Weather tools in one clean dashboard</h2>
+      </div>
+
+      <div class="feature-grid">
+        <article v-for="feature in features" :key="feature.title" class="info-card">
+          <div class="info-icon"><i :class="feature.icon"></i></div>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="stack-section">
+      <div class="section-heading compact">
+        <span class="eyebrow">Technology</span>
+        <h2>Project stack</h2>
+      </div>
+
+      <div class="stack-grid">
+        <article v-for="item in stack" :key="item.name" class="stack-card">
+          <i :class="item.icon"></i>
+          <div>
+            <h3>{{ item.name }}</h3>
+            <p>{{ item.description }}</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="data-section">
+      <div class="data-panel">
+        <div class="section-heading compact align-left">
+          <span class="eyebrow">Data source</span>
+          <h2>Powered by weather API data</h2>
         </div>
-      </section>
-    </div>
-  </div>
+        <p>
+          The app uses OpenWeather data to present current conditions,
+          forecasts, air quality, sunrise and sunset timing, weather maps, and
+          other environmental indicators. The goal is to turn raw weather data
+          into a readable interface that supports fast decisions.
+        </p>
+
+        <div class="source-list">
+          <div class="source-item">
+            <i class="fas fa-broadcast-tower"></i>
+            <span>Weather stations and observations</span>
+          </div>
+          <div class="source-item">
+            <i class="fas fa-satellite"></i>
+            <span>Satellite and atmospheric data</span>
+          </div>
+          <div class="source-item">
+            <i class="fas fa-chart-line"></i>
+            <span>Forecast models and trend indicators</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing-card">
+      <div>
+        <span class="eyebrow">Presentation note</span>
+        <h2>Designed for research defense clarity</h2>
+        <p>
+          The interface is intentionally minimal, readable, and structured so
+          the project can be explained clearly during a university report
+          defense: what data is used, how it is processed, and how users read it.
+        </p>
+      </div>
+      <a
+        class="github-link"
+        href="https://github.com/SeavThek168/pp-y3-weatherapp"
+        target="_blank"
+        rel="noopener"
+      >
+        <i class="fab fa-github"></i>
+        View repository
+      </a>
+    </section>
+  </main>
 </template>
 
 <script>
 export default {
-  name: 'AboutView'
-}
+  name: "AboutView",
+  data() {
+    return {
+      students: [
+        {
+          name: "Chhem Seavthek",
+          role: "Lead Coder & UI/UX Designer",
+          kicker: "Student 01",
+          icon: "fas fa-laptop-code",
+        },
+        {
+          name: "Ngeth Theareth",
+          role: "Co-developer",
+          kicker: "Student 02",
+          icon: "fas fa-code-branch",
+        },
+      ],
+      features: [
+        {
+          title: "Live Conditions",
+          description: "Current temperature, humidity, pressure, wind, visibility, and comfort indicators.",
+          icon: "fas fa-tachometer-alt",
+        },
+        {
+          title: "Forecast Views",
+          description: "Hourly and 5-day forecasts for short-term planning and weather trend reading.",
+          icon: "fas fa-calendar-week",
+        },
+        {
+          title: "Environmental Metrics",
+          description: "Air quality, UV index, precipitation, and visibility cards with readable visual summaries.",
+          icon: "fas fa-leaf",
+        },
+        {
+          title: "Weather Map",
+          description: "Map-based weather context for exploring conditions beyond the selected city.",
+          icon: "fas fa-map-marked-alt",
+        },
+        {
+          title: "Daily Planner",
+          description: "Time-of-day guidance that helps turn weather data into useful daily decisions.",
+          icon: "fas fa-calendar-check",
+        },
+        {
+          title: "Responsive UI",
+          description: "A dashboard layout designed to stay clear on desktop and mobile screens.",
+          icon: "fas fa-mobile-alt",
+        },
+      ],
+      stack: [
+        {
+          name: "Vue.js 3",
+          description: "Frontend framework for component-based views and reactive UI state.",
+          icon: "fab fa-vuejs",
+        },
+        {
+          name: "Vuex",
+          description: "Centralized state management for weather, forecast, unit, and location data.",
+          icon: "fas fa-database",
+        },
+        {
+          name: "OpenWeather API",
+          description: "External weather data provider for live conditions, forecasts, maps, and air quality.",
+          icon: "fas fa-cloud-download-alt",
+        },
+        {
+          name: "Bootstrap & SCSS",
+          description: "Responsive structure and custom styling for a polished dashboard experience.",
+          icon: "fab fa-bootstrap",
+        },
+      ],
+    };
+  },
+};
 </script>
 
 <style scoped>
-.about-view {
-  color: var(--text-primary);
-  padding: 40px 0 60px;
-}
-
-.about-container {
-  max-width: 1200px;
+.about-page {
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 34px 28px 92px;
+  color: var(--text-primary);
 }
 
-section {
-  margin-bottom: 80px;
-}
-
-/* Hero Section */
 .about-hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 100px;
-}
-
-.hero-content {
-  flex: 1;
-  min-width: 300px;
-  padding-right: 40px;
-}
-
-.about-title {
-  font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 15px;
-  line-height: 1.2;
-}
-
-.about-title span {
   position: relative;
-}
-
-.accent {
-  color: #fcd34d;
-}
-
-.about-subtitle {
-  font-size: 1.4rem;
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-  font-weight: 300;
-}
-
-.hero-divider {
-  width: 80px;
-  height: 4px;
-  background: linear-gradient(90deg, #6366f1, #fcd34d);
-  margin: 25px 0;
-  border-radius: 2px;
-}
-
-.hero-description {
-  font-size: 1.1rem;
-  line-height: 1.7;
-  margin-bottom: 30px;
-}
-
-/* Team Info Styles */
-.team-info {
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 25px;
-  margin-top: 30px;
-  box-shadow: var(--card-shadow);
-  border: 1px solid rgba(99, 102, 241, 0.1);
-}
-
-.team-heading {
-  font-size: 1.5rem;
-  margin-bottom: 10px;
-  color: var(--accent-color);
-  display: flex;
-  align-items: center;
-}
-
-.team-heading::before {
-  content: '';
-  display: inline-block;
-  width: 4px;
-  height: 20px;
-  background: linear-gradient(to bottom, #6366f1, #8b5cf6);
-  margin-right: 10px;
-  border-radius: 2px;
-}
-
-.team-intro {
-  font-size: 1rem;
-  margin-bottom: 20px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.team-members {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.team-member {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 10px 0;
-  border-bottom: 1px dashed rgba(99, 102, 241, 0.2);
-}
-
-.team-member:last-child {
-  border-bottom: none;
-}
-
-.member-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6366f1;
-  font-size: 18px;
-}
-
-.member-details h4 {
-  margin: 0 0 5px;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.member-details p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.hero-image {
-  flex: 1;
-  min-width: 300px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
-}
-
-.hero-icon {
-  font-size: 12rem;
-  color: var(--accent-color);
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 10px 15px rgba(99, 102, 241, 0.3));
-}
-
-/* Features Section */
-.section-title {
-  font-size: 2.2rem;
-  margin-bottom: 40px;
-  text-align: center;
-  position: relative;
-  padding-bottom: 15px;
-}
-
-.section-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  border-radius: 2px;
-}
-
-.features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 30px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 22px;
+  align-items: stretch;
+  margin-bottom: 28px;
 }
 
-.feature-card {
-  background: var(--card-bg);
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: var(--card-shadow);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+.hero-copy,
+.station-card,
+.team-section,
+.feature-section,
+.stack-section,
+.data-panel,
+.closing-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-sm);
 }
 
-.feature-card:hover {
-  transform: translateY(-10px);
-  box-shadow: var(--card-shadow-hover);
+:global(body.dark-theme) .hero-copy,
+:global(body.dark-theme) .station-card,
+:global(body.dark-theme) .team-section,
+:global(body.dark-theme) .feature-section,
+:global(body.dark-theme) .stack-section,
+:global(body.dark-theme) .data-panel,
+:global(body.dark-theme) .closing-card {
+  background: rgba(18, 31, 44, 0.82);
 }
 
-.feature-icon {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  border-radius: 12px;
-  display: flex;
+.hero-copy {
+  padding: clamp(28px, 5vw, 58px);
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(232, 244, 253, 0.92), rgba(255, 255, 255, 0.86)),
+    repeating-linear-gradient(135deg, rgba(74, 144, 196, 0.08) 0 1px, transparent 1px 18px);
+}
+
+:global(body.dark-theme) .hero-copy {
+  background:
+    linear-gradient(135deg, rgba(22, 38, 56, 0.96), rgba(18, 31, 44, 0.92)),
+    repeating-linear-gradient(135deg, rgba(122, 184, 216, 0.08) 0 1px, transparent 1px 18px);
+}
+
+.eyebrow {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
+  gap: 8px;
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.feature-icon i {
-  font-size: 24px;
-  color: #6366f1;
+.eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
-.feature-card h3 {
-  font-size: 1.4rem;
-  margin-bottom: 15px;
+.hero-copy h1,
+.section-heading h2,
+.closing-card h2 {
+  margin: 10px 0 0;
+  color: var(--text-primary);
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
 }
 
-.feature-card p {
+.hero-copy h1 {
+  max-width: 720px;
+  font-size: clamp(42px, 7vw, 82px);
+  line-height: 0.92;
+}
+
+.hero-lede {
+  max-width: 720px;
+  margin: 24px 0 0;
   color: var(--text-secondary);
-  line-height: 1.6;
+  font-size: clamp(16px, 2vw, 20px);
+  line-height: 1.65;
 }
 
-/* Tech Stack Section */
-.tech-cards {
+.hero-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 25px;
+  gap: 10px;
+  margin-top: 28px;
 }
 
-.tech-card {
-  background: var(--card-bg);
-  border-radius: 15px;
-  padding: 25px;
-  width: 220px;
-  text-align: center;
-  box-shadow: var(--card-shadow);
-  transition: transform 0.3s ease;
-}
-
-.tech-card:hover {
-  transform: translateY(-8px);
-}
-
-.tech-logo {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  display: flex;
+.hero-actions span {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin: 0 auto 20px;
-}
-
-.tech-logo i {
-  font-size: 32px;
-  color: white;
-}
-
-.tech-card h4 {
-  margin-bottom: 12px;
-  font-size: 1.2rem;
-}
-
-.tech-card p {
+  gap: 8px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
   color: var(--text-secondary);
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-/* Data Sources Section */
-.data-content {
-  background: var(--card-bg);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: var(--card-shadow);
+:global(body.dark-theme) .hero-actions span {
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.data-content > p {
-  margin-bottom: 30px;
-  line-height: 1.7;
+.hero-actions i,
+.source-item i,
+.stack-card i,
+.info-icon i {
+  color: var(--accent-dark);
 }
 
-.project-info {
-  margin-bottom: 30px;
-  padding: 20px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
-  border-left: 4px solid #6366f1;
-}
-
-.project-info h3 {
-  font-size: 1.3rem;
-  margin-bottom: 15px;
-  color: var(--accent-color);
-}
-
-.project-info p {
-  line-height: 1.7;
-  margin-bottom: 0;
-}
-
-.data-info {
+.station-card {
+  min-height: 390px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  justify-content: space-between;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(91, 196, 216, 0.22), transparent 32%),
+    linear-gradient(145deg, var(--bg-card), var(--bg-card-alt));
 }
 
-.info-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
+.station-orbit {
+  width: min(260px, 72%);
+  aspect-ratio: 1;
+  margin: 6px auto 0;
+  display: grid;
+  place-items: center;
+  border: 18px solid rgba(52, 116, 140, 0.14);
+  border-radius: 50%;
+  color: var(--accent-dark);
+  font-size: clamp(58px, 9vw, 112px);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 
-.info-icon {
-  width: 50px;
-  height: 50px;
-  min-width: 50px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  border-radius: 10px;
+.station-reading {
   display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+  margin-top: 30px;
+}
+
+.station-reading span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.station-reading strong {
+  color: var(--text-primary);
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1;
+  text-align: right;
+}
+
+.station-meter {
+  height: 8px;
+  margin-top: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.station-meter span {
+  display: block;
+  width: 78%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #5bc4d8);
+}
+
+.team-section,
+.feature-section,
+.stack-section,
+.data-panel,
+.closing-card {
+  margin-top: 22px;
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.section-heading {
+  max-width: 760px;
+  margin-bottom: 22px;
+}
+
+.section-heading.compact {
+  margin-bottom: 18px;
+}
+
+.section-heading.align-left {
+  margin-bottom: 14px;
+}
+
+.section-heading h2,
+.closing-card h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+}
+
+.section-heading p,
+.data-panel p,
+.closing-card p {
+  margin: 14px 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.student-card,
+.info-card,
+.stack-card,
+.source-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card-alt);
+}
+
+.student-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
   align-items: center;
-  justify-content: center;
+  padding: 20px;
 }
 
-.info-icon i {
-  color: #6366f1;
+.student-mark,
+.info-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--accent-light);
+  color: var(--accent-dark);
   font-size: 20px;
 }
 
-.info-text h4 {
-  margin-bottom: 8px;
+.student-kicker {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.info-text p {
+.student-card h3,
+.info-card h3,
+.stack-card h3 {
+  margin: 5px 0 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.student-card p,
+.info-card p,
+.stack-card p {
+  margin: 6px 0 0;
   color: var(--text-secondary);
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
-/* Footer Section */
-.about-footer {
-  background: var(--card-bg);
-  border-radius: 20px;
-  padding: 50px;
-  text-align: center;
-  box-shadow: var(--card-shadow);
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 
-.about-footer h2 {
-  margin-bottom: 20px;
+.info-card {
+  padding: 20px;
+  transition: transform 0.2s, border-color 0.2s;
 }
 
-.about-footer p {
-  max-width: 600px;
-  margin: 0 auto 30px;
-  line-height: 1.7;
+.info-card:hover,
+.stack-card:hover,
+.student-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
 }
 
-.social-links {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 30px;
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
-.social-link {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+.stack-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 18px;
+}
+
+.stack-card > i {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--accent-light);
+  font-size: 19px;
+}
+
+.source-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.source-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  text-decoration: none;
-}
-
-.social-link:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
-}
-
-.team-recognition {
-  margin: 25px 0;
+  gap: 12px;
   padding: 15px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.07), rgba(139, 92, 246, 0.07));
-}
-
-.team-recognition p {
-  margin: 0 0 5px;
-  font-size: 0.95rem;
-}
-
-.team-names {
-  font-weight: 600;
-  color: var(--accent-color);
-  font-size: 1.1rem !important;
-}
-
-.copyright {
-  font-size: 0.9rem;
   color: var(--text-secondary);
-  margin-bottom: 0;
+  font-weight: 800;
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .about-hero {
-    flex-direction: column;
-    margin-bottom: 60px;
+.source-item i {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--accent-light);
+  flex: 0 0 auto;
+}
+
+.closing-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+}
+
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 13px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: 900;
+  text-decoration: none;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.github-link:hover {
+  transform: translateY(-2px);
+  background: var(--accent-dark);
+}
+
+@media (max-width: 1100px) {
+  .about-hero,
+  .team-grid,
+  .feature-grid,
+  .stack-grid,
+  .source-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  
-  .hero-content {
-    padding-right: 0;
-    margin-bottom: 30px;
+}
+
+@media (max-width: 760px) {
+  .about-page {
+    padding: 24px 16px 82px;
   }
-  
-  .about-title {
-    font-size: 2.5rem;
-  }
-  
-  .team-info {
-    padding: 20px;
-    margin-top: 20px;
-  }
-  
-  .team-members {
-    gap: 10px;
-  }
-  
-  .hero-icon {
-    font-size: 8rem;
-  }
-  
-  .section-title {
-    font-size: 1.8rem;
-  }
-  
-  .features-grid {
+
+  .about-hero,
+  .team-grid,
+  .feature-grid,
+  .stack-grid,
+  .source-list {
     grid-template-columns: 1fr;
   }
-  
-  .tech-cards {
-    gap: 20px;
-  }
-  
-  .tech-card {
-    width: calc(50% - 10px);
-    padding: 20px 15px;
-  }
-  
-  .data-content {
-    padding: 25px;
-  }
-  
-  .about-footer {
-    padding: 30px 20px;
-  }
-}
 
-@media (max-width: 480px) {
-  .tech-card {
-    width: 100%;
+  .station-card {
+    min-height: 300px;
   }
-  
-  .info-item {
+
+  .closing-card {
+    align-items: flex-start;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+  }
+
+  .github-link {
+    width: 100%;
   }
 }
 </style>

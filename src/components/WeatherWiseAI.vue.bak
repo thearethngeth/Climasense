@@ -1,0 +1,4814 @@
+<template>
+  <div class="weatherwise-ai-container">
+    <!-- AI Chatbot Card -->
+    <div class="ai-chatbot-card">
+      <!-- Header -->
+      <div class="chat-header">
+        <div class="header-logo">
+          <div class="logo-icon">
+            <i class="fas fa-cloud-sun"></i>
+          </div>
+          <div class="header-title">
+            <h2>WeatherWise AI</h2>
+            <p>AI Weather Assistant - Powered by Claude</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animated Background -->
+      <div class="clouds-background">
+        <div class="cloud cloud1"></div>
+        <div class="cloud cloud2"></div>
+        <div class="cloud cloud3"></div>
+      </div>
+
+      <!-- Main Search/Ask Section -->
+      <div class="main-search-section">
+        <div class="search-container">
+          <div class="search-icon">
+            <i class="fas fa-search"></i>
+          </div>
+          <input 
+            v-model="userInput" 
+            type="text" 
+            class="main-search-input" 
+            placeholder="Search or ask about weather conditions..."
+            @keypress.enter="sendMessage"
+            @focus="onSearchFocus"
+            :disabled="isTyping"
+            ref="inputField"
+          />
+          <button 
+            class="main-send-btn" 
+            @click="sendMessage" 
+            :disabled="isTyping || !userInput.trim()"
+            :class="{ 'active': userInput.trim() }"
+          >
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+        <div class="search-suggestions" v-if="showSuggestions">
+          <button class="suggestion-chip" @click="useSuggestion('What\'s the weather today?')">
+            <i class="fas fa-sun"></i> What's the weather today?
+          </button>
+          <button class="suggestion-chip" @click="useSuggestion('Will it rain tomorrow?')">
+            <i class="fas fa-cloud-rain"></i> Will it rain tomorrow?
+          </button>
+          <button class="suggestion-chip" @click="useSuggestion('Temperature forecast for this week')">
+            <i class="fas fa-temperature-high"></i> Temperature forecast
+          </button>
+          <button class="suggestion-chip" @click="useSuggestion('What is the air quality?')">
+            <i class="fas fa-wind"></i> Air quality
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Messages Area -->
+      <div class="chat-messages" ref="messagesContainer">
+        <div v-for="(message, index) in messages" :key="index" :class="['message', message.type]">
+          <div class="message-avatar" v-if="message.type === 'bot'">
+            <i class="fas fa-cloud-sun"></i>
+          </div>
+          <div class="message-content">
+            <div class="message-bubble" v-html="formatMessage(message.text)"></div>
+            <div class="message-time">{{ message.time }}</div>
+          </div>
+          <div class="message-avatar" v-if="message.type === 'user'">
+            <i class="fas fa-user"></i>
+          </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div v-if="isTyping" class="message bot">
+          <div class="message-avatar">
+            <i class="fas fa-cloud-sun"></i>
+          </div>
+          <div class="message-content">
+            <div class="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Action Buttons -->
+      <div class="main-action-buttons">
+        <button class="main-action-btn ask-btn" @click="showAskMode">
+          <div class="btn-icon">
+            <i class="fas fa-comments"></i>
+          </div>
+          <div class="btn-content">
+            <h3>Ask</h3>
+            <p>Quick weather questions</p>
+          </div>
+        </button>
+        <button class="main-action-btn research-btn" @click="showResearchMode">
+          <div class="btn-icon">
+            <i class="fas fa-search"></i>
+          </div>
+          <div class="btn-content">
+            <h3>Research</h3>
+            <p>Deep weather analysis</p>
+          </div>
+        </button>
+      </div>
+
+      <!-- Quick Action Buttons (shown in Ask mode) -->
+      <div v-if="mode === 'ask'" class="quick-actions">
+        <button class="action-btn" @click="sendQuickAction('today')">
+          <i class="fas fa-sun"></i>
+          <span>Today's Weather</span>
+        </button>
+        <button class="action-btn" @click="sendQuickAction('monsoon')">
+          <i class="fas fa-cloud-rain"></i>
+          <span>Monsoon Info</span>
+        </button>
+        <button class="action-btn" @click="sendQuickAction('safety')">
+          <i class="fas fa-shield-alt"></i>
+          <span>Safety Tips</span>
+        </button>
+        <button class="action-btn" @click="sendQuickAction('maps')">
+          <i class="fas fa-map"></i>
+          <span>Weather Maps</span>
+        </button>
+      </div>
+
+      <!-- Research Topics (shown in Research mode) -->
+      <div v-if="mode === 'research'" class="research-topics">
+        <button class="research-topic-btn" @click="sendResearchTopic('climate')">
+          <i class="fas fa-globe-asia"></i>
+          <span>Climate Patterns</span>
+        </button>
+        <button class="research-topic-btn" @click="sendResearchTopic('historical')">
+          <i class="fas fa-history"></i>
+          <span>Historical Data</span>
+        </button>
+        <button class="research-topic-btn" @click="sendResearchTopic('forecast')">
+          <i class="fas fa-chart-line"></i>
+          <span>Forecast Analysis</span>
+        </button>
+        <button class="research-topic-btn" @click="sendResearchTopic('science')">
+          <i class="fas fa-flask"></i>
+          <span>Weather Science</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { ref, computed, nextTick, onMounted } from 'vue';
+import { useStore } from 'vuex';
+import moment from 'moment';
+
+export default {
+  name: 'WeatherWiseAI',
+  setup() {
+    const store = useStore();
+    const messages = ref([]);
+    const userInput = ref('');
+    const isTyping = ref(false);
+    const messagesContainer = ref(null);
+    const inputField = ref(null);
+    const mode = ref(null); // 'ask' or 'research'
+    const showSuggestions = ref(false);
+    const conversationContext = ref({
+      lastTopic: null,
+      askedAboutRain: false,
+      askedAboutTemp: false,
+      locationSet: false
+    });
+
+    const currentWeather = computed(() => store.state.currentWeather);
+    const forecast = computed(() => store.state.forecast);
+
+    // Initialize with welcome message
+    onMounted(() => {
+      addMessage('bot', `Hello! I'm WeatherWise AI - your intelligent weather assistant! 🌤️
+
+**🤖 How I Work:**
+I use advanced Natural Language Processing to:
+1. 📝 Understand your question
+2. 📍 Extract location & date information
+3. 🌐 Fetch real-time weather data
+4. 💬 Provide human-friendly answers
+
+**Ask me naturally like:**
+• "What's the weather in Phnom Penh?"
+• "Will it rain tomorrow?"
+• "Temperature in London next week"
+• "Should I bring an umbrella?"
+
+Try asking me anything about the weather! 🚀`);
+    });
+
+    const onSearchFocus = () => {
+      showSuggestions.value = true;
+    };
+
+    const useSuggestion = (suggestion) => {
+      userInput.value = suggestion;
+      showSuggestions.value = false;
+      sendMessage();
+    };
+
+    const showAskMode = () => {
+      mode.value = 'ask';
+      addMessage('bot', `**Ask Mode Activated** 💬
+
+I'm ready for your quick weather questions! You can:
+• Ask about current conditions
+• Get weather forecasts
+• Learn safety tips
+• Understand weather patterns
+
+Use the quick buttons below or type your own question!`);
+    };
+
+    const showResearchMode = () => {
+      mode.value = 'research';
+      addMessage('bot', `**Research Mode Activated** 🔬
+
+Let's explore weather science in depth! Choose a research topic:
+• Climate Patterns - Long-term weather trends
+• Historical Data - Past weather events
+• Forecast Analysis - Prediction methods
+• Weather Science - How it all works
+
+Select a topic or ask your own research question!`);
+    };
+
+    const sendResearchTopic = (topic) => {
+      const topics = {
+        climate: "Tell me about Cambodia's climate patterns and seasonal changes",
+        historical: "What are some notable historical weather events in Cambodia?",
+        forecast: "How do weather forecasts work and how accurate are they?",
+        science: "Explain the science behind weather formation and changes"
+      };
+      
+      userInput.value = topics[topic];
+      sendMessage();
+    };
+
+    const addMessage = (type, text) => {
+      messages.value.push({
+        type,
+        text,
+        time: moment().format('hh:mm A')
+      });
+      nextTick(() => {
+        if (messagesContainer.value) {
+          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+        }
+      });
+    };
+
+    const formatMessage = (text) => {
+      // Convert markdown-style formatting to HTML with enhanced styling
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>')
+        .replace(/•/g, '<span class="bullet">•</span>')
+        .replace(/🌡️|☀️|🌧️|💧|💨|☁️|⛅|🌤️|🔥|❄️|🍃|🧥|☂️|📊|📅|⏰|📍|🔍|🌍/g, '<span class="emoji">$&</span>');
+    };
+
+    const sendMessage = async () => {
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      showSuggestions.value = false;
+      
+      // Track conversation context
+      if (message.match(/rain/i)) conversationContext.value.askedAboutRain = true;
+      if (message.match(/temp|hot|cold|warm/i)) conversationContext.value.askedAboutTemp = true;
+      if (currentWeather.value) conversationContext.value.locationSet = true;
+      
+      addMessage('user', message);
+      userInput.value = '';
+      isTyping.value = true;
+
+      try {
+        // Step 1: AI NLP Processing - Extract location and date
+        const extractedInfo = extractLocationAndDate(message);
+        
+        // Step 2: Fetch Weather API data if location is extracted
+        if (extractedInfo.location && extractedInfo.location !== 'current') {
+          // Show AI is processing location
+          const processingMsg = `🔍 *Searching weather data for ${extractedInfo.location}...*`;
+          addMessage('bot', processingMsg);
+          
+          await store.dispatch('searchWeather', extractedInfo.location);
+          // Small delay to ensure data is loaded
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Remove the processing message
+          messages.value.pop();
+        }
+        
+        // Step 3: AI Interpretation & Human-friendly response
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+        const response = await getSmartAIResponse(message.toLowerCase(), message, extractedInfo);
+        
+        isTyping.value = false;
+        addMessage('bot', response);
+      } catch (error) {
+        isTyping.value = false;
+        addMessage('bot', `I encountered an issue processing your request. Please try again or rephrase your question. 🔄`);
+        console.error('AI Error:', error);
+      }
+    };
+
+    // Step 1: NLP - Extract Location and Date from User Question
+    const extractLocationAndDate = (question) => {
+      const result = {
+        location: null,
+        date: null,
+        dateType: 'current' // current, today, tomorrow, specific
+      };
+
+      // Date extraction
+      const datePatterns = {
+        today: /\b(today|now|current|right now)\b/i,
+        tomorrow: /\btomorrow\b/i,
+        thisWeek: /\b(this week|next week|coming week)\b/i,
+        specific: /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|\d{1,2}\/\d{1,2}|\d{1,2}-\d{1,2})\b/i
+      };
+
+      if (datePatterns.tomorrow.test(question)) {
+        result.date = moment().add(1, 'day');
+        result.dateType = 'tomorrow';
+      } else if (datePatterns.thisWeek.test(question)) {
+        result.date = moment().add(3, 'days');
+        result.dateType = 'week';
+      } else if (datePatterns.specific.test(question)) {
+        result.dateType = 'specific';
+        // Extract specific date
+        const match = question.match(datePatterns.specific);
+        if (match) result.date = match[0];
+      } else if (datePatterns.today.test(question)) {
+        result.date = moment();
+        result.dateType = 'today';
+      }
+
+      // Location extraction - Common city patterns
+      const locationPatterns = [
+        /\bin ([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)/,
+        /\bat ([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)/,
+        /\bfor ([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)/,
+        /([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)'s weather/,
+        /weather (?:in|at|for) ([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)/i
+      ];
+
+      for (const pattern of locationPatterns) {
+        const match = question.match(pattern);
+        if (match && match[1]) {
+          result.location = match[1];
+          break;
+        }
+      }
+
+      // Common city names (lowercase check)
+      const commonCities = ['phnom penh', 'siem reap', 'battambang', 'london', 'paris', 'tokyo', 'new york', 'bangkok', 'singapore', 'hanoi'];
+      const lowerQuestion = question.toLowerCase();
+      for (const city of commonCities) {
+        if (lowerQuestion.includes(city)) {
+          result.location = city.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          break;
+        }
+      }
+
+      // If no location found but weather data exists, use current
+      if (!result.location && currentWeather.value) {
+        result.location = 'current';
+      }
+
+      return result;
+    };
+
+    const sendQuickAction = (action) => {
+      const actions = {
+        today: "What's the weather like today?",
+        monsoon: "Tell me about Cambodia's monsoon season",
+        safety: "What are some weather safety tips?",
+        maps: "How do I read weather maps?"
+      };
+      
+      userInput.value = actions[action];
+      sendMessage();
+    };
+
+    // Enhanced Smart AI Response System with Location & Date awareness
+    const getSmartAIResponse = async (question, originalQuestion, extractedInfo = {}) => {
+      const weather = currentWeather.value;
+      const forecastData = forecast.value;
+
+      // Show location awareness if location was extracted
+      let locationContext = '';
+      if (extractedInfo.location && extractedInfo.location !== 'current') {
+        locationContext = `*Analyzing weather for ${extractedInfo.location}...*\n\n`;
+      }
+
+      // Show date awareness if date was extracted
+      let dateContext = '';
+      if (extractedInfo.dateType === 'tomorrow') {
+        dateContext = '**Tomorrow\'s Weather:**\n';
+      } else if (extractedInfo.dateType === 'week') {
+        dateContext = '**This Week\'s Weather:**\n';
+      } else if (extractedInfo.dateType === 'today') {
+        dateContext = '**Today\'s Weather:**\n';
+      }
+
+      // Current Weather Questions
+      if (question.match(/what('?s| is)? (the )?weather|current (weather|conditions?)|weather (now|today|right now)/i)) {
+        if (weather && weather.main) {
+          const temp = weather.main.temp.toFixed(1);
+          const feelsLike = weather.main.feels_like.toFixed(1);
+          const desc = weather.weather[0].description;
+          const humidity = weather.main.humidity;
+          const windSpeed = weather.wind.speed;
+          const location = weather.name;
+
+          return `${locationContext}${dateContext}**Weather in ${location}** 🌤️
+
+🌡️ **Temperature:** ${temp}°C (feels like ${feelsLike}°C)
+☁️ **Conditions:** ${desc.charAt(0).toUpperCase() + desc.slice(1)}
+💧 **Humidity:** ${humidity}%
+💨 **Wind:** ${windSpeed} m/s
+
+${getWeatherAdvice(temp, desc, humidity)}
+
+*Want to know more? Ask about tomorrow's forecast or specific conditions!*`;
+        }
+        return `${locationContext}I'd love to tell you about the weather! Please search for a location first using the search bar at the top. 🌍`;
+      }
+
+      // Temperature Questions with Date awareness
+      if (question.match(/temperature|how (hot|cold|warm)|temp|degrees/i)) {
+        if (extractedInfo.dateType === 'tomorrow' && forecastData && forecastData.list) {
+          const tomorrowData = forecastData.list.slice(8, 16);
+          if (tomorrowData.length > 0) {
+            const avgTemp = (tomorrowData.reduce((sum, f) => sum + f.main.temp, 0) / tomorrowData.length).toFixed(1);
+            const maxTemp = Math.max(...tomorrowData.map(f => f.main.temp)).toFixed(1);
+            const minTemp = Math.min(...tomorrowData.map(f => f.main.temp)).toFixed(1);
+            
+            return `${locationContext}**Tomorrow's Temperature Forecast** 🌡️
+
+📊 **Expected Range:** ${minTemp}°C to ${maxTemp}°C
+📈 **Average:** ${avgTemp}°C
+
+${getTempAdvice(parseFloat(avgTemp))}
+
+*Based on 8 forecast points throughout tomorrow. Conditions may vary!*`;
+          }
+        }
+        
+        if (weather && weather.main) {
+          const temp = weather.main.temp.toFixed(1);
+          const feelsLike = weather.main.feels_like.toFixed(1);
+          const tempMin = weather.main.temp_min.toFixed(1);
+          const tempMax = weather.main.temp_max.toFixed(1);
+
+          return `${locationContext}${dateContext}**Temperature Analysis** 🌡️
+
+🌡️ **Current:** ${temp}°C (feels like ${feelsLike}°C)
+📊 **Today's Range:** ${tempMin}°C to ${tempMax}°C
+
+${getTempAdvice(parseFloat(temp))}
+
+💡 *The "feels like" temperature accounts for humidity and wind chill.*`;
+        }
+        return `${locationContext}To check the temperature, please search for a location first! 📍`;
+      }
+
+      // Rain/Precipitation Questions with intelligent date handling
+      if (question.match(/rain|precipitation|wet|storm|shower/i)) {
+        if (forecastData && forecastData.list) {
+          let forecastSlice = forecastData.list.slice(0, 8);
+          let timeframe = "next 24 hours";
+          
+          if (extractedInfo.dateType === 'tomorrow') {
+            forecastSlice = forecastData.list.slice(8, 16);
+            timeframe = "tomorrow";
+          }
+          
+          const upcomingRain = forecastSlice.filter(f => f.pop && f.pop > 0.3);
+          
+          if (upcomingRain.length > 0) {
+            const nextRain = upcomingRain[0];
+            const rainTime = moment(nextRain.dt_txt).format('h:mm A on MMM D');
+            const rainChance = Math.round(nextRain.pop * 100);
+            
+            return `${locationContext}**Rain Forecast for ${timeframe}** 🌧️
+
+⏰ **Expected:** ${rainTime}
+💧 **Chance:** ${rainChance}%
+📊 **Rain Periods:** ${upcomingRain.length} expected
+
+**Recommendations:**
+• ☂️ Bring an umbrella
+• 📱 Check updates regularly
+• 🏠 Consider indoor activities for heavy rain
+
+*Forecasts can change - check back for updates!*`;
+          } else {
+            return `${locationContext}**No Rain Expected** ☀️
+
+Good news! No significant rain forecasted for ${timeframe}.
+
+Perfect weather for outdoor activities! 🎉`;
+          }
+        }
+        return `${locationContext}Let me check the rain forecast! Please search for a location first. 🔍`;
+      }
+
+      // Forecast Questions with smart date handling
+      if (question.match(/forecast|tomorrow|next (day|week|few days)|coming days|will it|gonna/i)) {
+        if (forecastData && forecastData.list) {
+          let forecastSlice = forecastData.list.slice(0, 8);
+          let timeframe = "Next 24 Hours";
+          
+          if (extractedInfo.dateType === 'tomorrow') {
+            forecastSlice = forecastData.list.slice(8, 16);
+            timeframe = "Tomorrow";
+          } else if (extractedInfo.dateType === 'week') {
+            forecastSlice = forecastData.list.slice(0, 40);
+            timeframe = "This Week";
+          }
+          
+          const avgTemp = (forecastSlice.reduce((sum, f) => sum + f.main.temp, 0) / forecastSlice.length).toFixed(1);
+          const conditions = [...new Set(forecastSlice.map(f => f.weather[0].main))];
+          const rainChance = Math.max(...forecastSlice.map(f => f.pop || 0)) * 100;
+          
+          return `${locationContext}**${timeframe} Forecast** 📅
+
+🌡️ **Avg Temperature:** ${avgTemp}°C
+☁️ **Conditions:** ${conditions.join(', ')}
+💧 **Max Rain Chance:** ${rainChance.toFixed(0)}%
+
+📊 **Detailed View:**
+Check the hourly and 5-day forecast cards on the main page for:
+• Hour-by-hour changes
+• Precipitation timing
+• Wind patterns
+• Humidity levels
+
+*Ask me about specific conditions for more details!*`;
+        }
+        return `${locationContext}To see the forecast, please search for a location first! 🌍`;
+      }
+
+      // Humidity Questions
+      if (question.match(/humidity|humid|moisture|damp/i)) {
+        if (weather && weather.main) {
+          const humidity = weather.main.humidity;
+          let humidityAdvice = '';
+          
+          if (humidity > 70) {
+            humidityAdvice = "**High humidity!** 💧 It may feel uncomfortable and muggy. Stay in air-conditioned spaces when possible.";
+          } else if (humidity > 50) {
+            humidityAdvice = "**Moderate humidity** - Comfortable conditions for most activities.";
+          } else {
+            humidityAdvice = "**Low humidity** - Air is dry. Consider using moisturizer and staying hydrated.";
+          }
+
+          return `**Humidity Analysis** 💧
+
+**Current Humidity:** ${humidity}%
+
+${humidityAdvice}
+
+**What is humidity?**
+Humidity measures the amount of water vapor in the air. Higher humidity makes heat feel more intense and can affect comfort levels.`;
+        }
+        return `I can check the humidity for you! Please search for a location first. 📍`;
+      }
+
+      // Wind Questions
+      if (question.match(/wind|windy|breeze|gust/i)) {
+        if (weather && weather.wind) {
+          const windSpeed = weather.wind.speed;
+          const windDeg = weather.wind.deg;
+          const direction = getWindDirection(windDeg);
+          
+          let windAdvice = '';
+          if (windSpeed > 10) {
+            windAdvice = "**Strong winds!** 💨 Secure loose objects and be cautious when driving.";
+          } else if (windSpeed > 5) {
+            windAdvice = "**Moderate breeze** - Pleasant wind conditions.";
+          } else {
+            windAdvice = "**Light winds** - Calm conditions.";
+          }
+
+          return `**Wind Analysis** 💨
+
+**Wind Speed:** ${windSpeed} m/s
+**Direction:** ${direction} (${windDeg}°)
+
+${windAdvice}
+
+**Wind Speed Reference:**
+• 0-2 m/s: Calm
+• 2-5 m/s: Light breeze
+• 5-10 m/s: Moderate breeze
+• 10+ m/s: Strong winds`;
+        }
+        return `I can check wind conditions! Please search for a location first. 🌍`;
+      }
+
+      // Air Quality Questions
+      if (question.match(/air quality|aqi|pollution|air pollution/i)) {
+        return `**Air Quality Information** 🍃
+
+To check air quality:
+1. Look for the "Air Quality Index" card on the main page
+2. It shows real-time AQI levels
+3. Includes health recommendations
+4. Color-coded for easy understanding
+
+**AQI Levels:**
+• 0-50: Good (Green)
+• 51-100: Moderate (Yellow)
+• 101-150: Unhealthy for sensitive groups (Orange)
+• 151+: Unhealthy (Red)
+
+Would you like to know about current conditions in your area?`;
+      }
+
+      // UV Index Questions
+      if (question.match(/uv|sun exposure|sunburn|sun protection/i)) {
+        return `**UV Index Information** ☀️
+
+Check the "UV Index" card on the main page for:
+• Current UV levels
+• Sun protection recommendations
+• Best times for sun exposure
+• Risk levels throughout the day
+
+**UV Protection Tips:**
+• UV 0-2: Low risk
+• UV 3-5: Moderate - Use sunscreen
+• UV 6-7: High - Seek shade during midday
+• UV 8-10: Very High - Extra protection needed
+• UV 11+: Extreme - Avoid sun exposure
+
+Stay safe in the sun! 🧴`;
+      }
+
+      // Location/Search Questions
+      if (question.match(/how (do|to) (search|find|change|set) location|change city|different place/i)) {
+        return `**Changing Location** 📍
+
+**Quick Search:**
+1. 🔍 Find the search bar at the top
+2. 🌍 Type any city name (e.g., "Phnom Penh", "London")
+3. ⏎ Press Enter or click Search
+4. ✅ Weather updates automatically!
+
+**Tips:**
+• Try "City, Country" for better results
+• Search works worldwide
+• Recent searches are saved
+• Current location can be auto-detected
+
+What location would you like to check?`;
+      }
+
+      // Fallback with context-aware suggestions
+      if (!conversationContext.value.locationSet) {
+        return `**Let's Get Started!** 🌍
+
+I noticed you haven't searched for a location yet. To give you accurate weather information:
+
+1. Use the search bar at the top of the page
+2. Type any city name
+3. Then ask me about the weather!
+
+**In the meantime, you can ask me:**
+• How weather forecasts work
+• About Cambodia's monsoon season
+• Weather safety tips
+• How to use this app
+
+What would you like to know?`;
+      }
+
+      // If we reach here, try original response system
+      return getAIResponse(question);
+    };
+
+    // Helper function to get wind direction
+    const getWindDirection = (degrees) => {
+      const directions = ['North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', 'North-West'];
+      const index = Math.round(degrees / 45) % 8;
+      return directions[index];
+    };
+
+    // Helper function to provide weather advice
+    const getWeatherAdvice = (temp, description, humidity) => {
+      const advice = [];
+      
+      if (temp > 30) {
+        advice.push("☀️ **Hot day ahead!** Stay hydrated, use sunscreen, and avoid midday sun exposure.");
+      } else if (temp < 15) {
+        advice.push("🧥 **Cool weather!** Consider wearing layers and a jacket.");
+      }
+      
+      if (description.includes('rain')) {
+        advice.push("☂️ **Rain expected!** Don't forget your umbrella.");
+      } else if (description.includes('cloud')) {
+        advice.push("☁️ **Cloudy skies** - Good conditions for outdoor activities without harsh sun.");
+      } else if (description.includes('clear')) {
+        advice.push("☀️ **Clear skies!** Perfect weather for outdoor plans.");
+      }
+      
+      if (humidity > 70) {
+        advice.push("💧 **High humidity** - May feel more uncomfortable than the temperature suggests.");
+      }
+      
+      return advice.length > 0 ? advice.join('\n') : "Conditions look stable!";
+    };
+
+    // Helper function for temperature advice
+    const getTempAdvice = (temp) => {
+      if (temp > 35) {
+        return "🔥 **Extremely Hot!** Limit outdoor exposure. Stay in air-conditioned spaces, drink plenty of water.";
+      } else if (temp > 30) {
+        return "☀️ **Very Warm!** Stay hydrated, use sunscreen SPF 30+, and seek shade during peak hours.";
+      } else if (temp > 25) {
+        return "😊 **Pleasant & Warm!** Ideal weather for most outdoor activities. Light clothing recommended.";
+      } else if (temp > 20) {
+        return "👌 **Comfortable!** Perfect temperature for all activities. Enjoy the weather!";
+      } else if (temp > 15) {
+        return "🍃 **Mild & Cool!** Light jacket recommended. Great for outdoor walks.";
+      } else if (temp > 10) {
+        return "🧥 **Cool Weather!** Wear layers and a jacket. Hot beverages recommended.";
+      } else {
+        return "❄️ **Cold!** Bundle up with warm clothing. Limit prolonged outdoor exposure.";
+      }
+    };
+
+    // Helper function to add contextual follow-up suggestions
+    const addFollowUpSuggestions = (response, questionType) => {
+      const followUps = {
+        temperature: ["\n\n**Want to know more?**\n• Ask about humidity levels\n• Check the hourly forecast\n• Get rain predictions"],
+        rain: ["\n\n**Related questions:**\n• What's the temperature?\n• Should I bring an umbrella?\n• Check hourly forecast for timing"],
+        forecast: ["\n\n**Dig deeper:**\n• Ask about specific days\n• Check rain chances\n• Get temperature trends"],
+        current: ["\n\n**Also check:**\n• Tomorrow's forecast\n• Rain probability\n• UV index and air quality"]
+      };
+      
+      if (followUps[questionType]) {
+        return response + followUps[questionType][0];
+      }
+      return response;
+    };
+
+    const getAIResponse = (question) => {
+      // Smart greeting detection
+      if (question.match(/^(hi|hello|hey|good morning|good afternoon|good evening|greetings|sup|yo|howdy)/i) && question.length < 30) {
+        const greetings = [
+          "Hello! 👋 How can I help you with weather information today?",
+          "Hi there! 🌤️ Ready to explore weather conditions? Ask me anything!",
+          "Hey! 😊 What weather information are you looking for?",
+          "Greetings! ⛅ I'm here to help with all your weather questions!"
+        ];
+        return greetings[Math.floor(Math.random() * greetings.length)];
+      }
+
+      // Thank you responses
+      if (question.match(/^(thank|thanks|thx|appreciate|grateful)/i)) {
+        return "You're welcome! 😊 Feel free to ask me anything else about the weather. I'm always here to help! 🌤️";
+      }
+
+      // Help/capability questions
+      if (question.match(/what can you (do|tell)|how (can|do) you help|capabilities|functions/i)) {
+        return `**What I Can Do** 🤖
+
+I'm your intelligent weather assistant! Here's how I can help:
+
+**Current Weather:**
+• Temperature and feels-like conditions
+• Humidity, wind speed, and direction
+• Weather descriptions and conditions
+• Real-time updates from your location
+
+**Forecasts:**
+• Hourly predictions for the next 24 hours
+• 5-day weather outlook
+• Rain probability and timing
+• Temperature trends
+
+**Analysis & Advice:**
+• Personalized weather recommendations
+• Safety tips based on conditions
+• Best times for outdoor activities
+• Weather pattern explanations
+
+**Educational Content:**
+• How weather works
+• Climate information
+• Seasonal patterns (especially Cambodia's monsoons)
+• Understanding weather terminology
+
+Just ask me anything naturally - like "Will it rain tomorrow?" or "What's the temperature?" I understand conversational language! 💬`;
+      }
+
+      // Smart question detection for complex queries
+      if (question.match(/should i|is it (good|bad|safe|okay)|can i|recommend/i)) {
+        const weather = currentWeather.value;
+        if (weather && weather.main) {
+          const temp = weather.main.temp;
+          const desc = weather.weather[0].description.toLowerCase();
+          
+          let recommendation = '';
+          if (question.match(/outdoor|outside|park|walk|run|exercise/i)) {
+            if (desc.includes('rain') || desc.includes('storm')) {
+              recommendation = "**Indoor activities recommended** ☔\n\nIt's rainy outside. Consider postponing outdoor plans or bringing rain gear.";
+            } else if (temp > 32) {
+              recommendation = "**Exercise caution outdoors** 🌡️\n\nIt's very hot. If going out:\n• Stay hydrated\n• Use sunscreen\n• Avoid midday sun (11 AM - 3 PM)\n• Take frequent breaks";
+            } else if (temp > 20 && temp < 30) {
+              recommendation = "**Perfect for outdoor activities!** ☀️\n\nGreat weather conditions for:\n• Walking or jogging\n• Outdoor sports\n• Picnics\n• General outdoor activities";
+            } else {
+              recommendation = "**Comfortable conditions** 👍\n\nWeather looks good for outdoor activities. Just dress appropriately for the temperature.";
+            }
+            return recommendation;
+          }
+          
+          if (question.match(/umbrella/i)) {
+            if (desc.includes('rain') || desc.includes('drizzle')) {
+              return "**Yes, bring an umbrella!** ☂️\n\nRain is present or expected. Better to be prepared!";
+            } else {
+              return "**No umbrella needed** ☀️\n\nNo rain in the current conditions. You should be good to go!";
+            }
+          }
+        }
+      }
+
+      // Comparative questions (better/worse/warmer/cooler)
+      if (question.match(/(warmer|cooler|hotter|colder|better|worse) than/i)) {
+        return `**Weather Comparisons** 📊
+
+I can help compare weather conditions! However, I need you to be more specific:
+
+• Comparing to another day? "How does today compare to yesterday?"
+• Comparing to another location? "Is it warmer here than in [city]?"
+• Comparing to average? "Is this hotter than normal?"
+
+Please rephrase your question with more details, and I'll give you a detailed comparison!`;
+      }
+
+      // Time-based questions (when will, what time)
+      if (question.match(/when (will|does)|what time/i)) {
+        if (question.match(/rain|storm|precipitation/i)) {
+          const forecastData = forecast.value;
+          if (forecastData && forecastData.list) {
+            const nextRain = forecastData.list.find(f => f.weather[0].main.toLowerCase().includes('rain'));
+            if (nextRain) {
+              const rainTime = moment(nextRain.dt_txt).format('h:mm A on MMM D');
+              return `**Rain Timing** 🌧️\n\nRain is expected around ${rainTime}.\n\nKeep an eye on updates as weather can change!`;
+            } else {
+              return `**No Rain Expected** ☀️\n\nI don't see rain in the forecast for the next few days. Looks like clear skies ahead!`;
+            }
+          }
+        }
+        
+        if (question.match(/sunrise|sunset|sun/i)) {
+          return `**Sun Timing** 🌅\n\nFor sunrise and sunset times, check the "Sunrise & Sunset" card on the main page!\n\nIt shows:\n• Exact sunrise time\n• Exact sunset time\n• Daylight duration\n• Beautiful visualizations`;
+        }
+      }
+
+      // General Questions (Q1-Q5)
+      if (question.includes('what is weatherwise') || question.includes('about weatherwise') || question.includes('tell me about this')) {
+        return `**What is WeatherWise AI?**
+
+WeatherWise AI is your intelligent weather assistant powered by advanced AI technology! 🌤️
+
+**Key Features:**
+• 🎯 Real-time weather information
+• 📊 7-day forecasts and trends
+• 🇰🇭 Cambodia-specific expertise
+• 💬 Conversational interface
+• 📚 Educational weather content
+• 🆓 Completely free to use
+
+**Perfect For:**
+• Daily weather planning
+• Learning about weather science
+• Understanding monsoon patterns
+• Travel planning
+• Agricultural planning
+• Educational purposes
+
+It's designed to make weather information accessible, educational, and conversational for everyone! No account needed - just start asking questions! 😊`;
+      }
+
+      if (question.includes('who created') || question.includes('who made') || question.includes('developer')) {
+        return `**About WeatherWise AI**
+
+WeatherWise AI was created as an educational weather information platform designed to help people better understand and prepare for weather conditions, especially in Cambodia! 🇰🇭
+
+**Development Goals:**
+• Make weather data accessible to everyone
+• Provide educational weather content
+• Focus on Cambodia's unique climate
+• Free and open for all users
+• No tracking or data collection
+
+**Technology:**
+• Built with Vue.js 3
+• Powered by Claude AI
+• Integrates with weather APIs
+• Modern responsive design
+• Progressive web technology
+
+Have more questions about how it works? Just ask! 😊`;
+      }
+
+      if (question.includes('free') || question.includes('cost') || question.includes('price') || question.includes('pay')) {
+        return `**100% Free! 🎉**
+
+WeatherWise AI is completely **FREE** to use with:
+
+✅ **No hidden costs**
+✅ **No subscriptions required**
+✅ **No account creation needed**
+✅ **No advertisements**
+✅ **No data selling**
+✅ **Unlimited questions**
+
+**Our Philosophy:**
+Weather information should be accessible to everyone. We believe knowledge about weather and climate is essential for safety, planning, and education.
+
+**What You Get:**
+• Real-time weather data
+• 7-day forecasts
+• Educational content
+• Safety tips
+• Cambodia expertise
+• Natural conversation
+
+Start asking questions - it won't cost you a thing! 💙`;
+      }
+
+      if (question.includes('installation') || question.includes('install') || question.includes('requirements') || question.includes('browser')) {
+        return `**Installation & Requirements**
+
+**No Installation Needed! 🚀**
+
+WeatherWise AI is a web-based application - just open it in your browser!
+
+**Browser Requirements:**
+✅ Chrome (recommended)
+✅ Firefox
+✅ Safari
+✅ Edge
+✅ Any modern browser
+
+**Minimum Requirements:**
+• Internet connection
+• Modern browser (last 2 years)
+• JavaScript enabled
+• No plugins needed
+
+**Works On:**
+📱 Mobile phones
+💻 Tablets
+🖥️ Desktop computers
+⌚ Any device with a browser!
+
+**For Best Experience:**
+• Stable internet connection
+• Screen resolution 320px+
+• Updated browser version
+
+**Getting Started:**
+1. Open the website
+2. Click the WeatherWise AI button
+3. Start asking questions!
+
+That's it - no downloads, no sign-ups! 🎯`;
+      }
+
+      if (question.includes('language') || question.includes('translation') || question.includes('khmer') || question.includes('english')) {
+        return `**Language Support**
+
+**Currently Available:**
+🇬🇧 **English** - Full support
+
+**Coming Soon:**
+🇰🇭 **Khmer (ភាសាខ្មែរ)** - In development
+🇹🇭 **Thai** - Planned
+🇻🇳 **Vietnamese** - Planned
+
+**Why English First?**
+We're focusing on creating the best experience in English first, then expanding to local languages with accurate translations and culturally relevant content.
+
+**What's Included:**
+• Weather terminology
+• Safety instructions
+• Educational content
+• Conversational responses
+
+**Help Us!**
+If you'd like to help translate WeatherWise AI into your language, let the developers know!
+
+**Current Workaround:**
+Use your browser's built-in translation feature for basic translation until native support is added! 🌍`;
+      }
+
+      // Features & Capabilities (Q6-Q10)
+      if (question.includes('what can you do') || question.includes('features') || question.includes('capabilities')) {
+        return `**WeatherWise AI Capabilities** 🎯
+
+**Weather Information:**
+🌡️ Current temperature & conditions
+📊 7-day forecasts
+💨 Wind speed & direction
+💧 Humidity levels
+☔ Precipitation probability
+☀️ UV index information
+🌅 Sunrise/sunset times
+
+**Cambodia Expertise:**
+🇰🇭 Monsoon season details
+🗺️ Regional weather patterns
+🌾 Agricultural weather insights
+🏖️ Best travel times
+⚠️ Local weather phenomena
+
+**Educational Content:**
+📚 Weather science explained
+🎓 Climate patterns
+🌪️ Severe weather understanding
+📖 Weather terminology
+🔬 How forecasts work
+
+**Interactive Features:**
+💬 Natural conversations
+❓ Follow-up questions
+🎯 Quick action buttons
+📍 Location-specific data
+🔄 Real-time updates
+
+**Safety Features:**
+⚠️ Weather alerts
+🚨 Emergency preparedness
+💡 Safety tips
+🏥 Health recommendations
+
+Just ask me anything! 😊`;
+      }
+
+      if (question.includes('real-time') || question.includes('live data') || question.includes('update')) {
+        return `**Real-Time Data Capabilities** ⚡
+
+**Data Updates:**
+🔄 Weather data refreshes automatically
+⏱️ Updates every 10-15 minutes
+📊 Real-time forecast adjustments
+🌐 Live API integrations
+
+**What's Real-Time:**
+✅ Current temperature
+✅ Weather conditions
+✅ Wind speed/direction
+✅ Humidity levels
+✅ Atmospheric pressure
+✅ Visibility
+✅ Cloud coverage
+
+**Forecast Data:**
+📅 Updated multiple times daily
+🎯 Improved accuracy as time approaches
+🔮 7-day outlook available
+📈 Trend analysis
+
+**Sources:**
+• Professional weather stations
+• Satellite imagery
+• Meteorological agencies
+• Global weather models
+
+**Limitations:**
+⚠️ 5-15 minute delay from actual conditions
+⚠️ Depends on station proximity
+⚠️ Internet connection required
+
+**Pro Tip:**
+For severe weather, always check official meteorological services for the most critical updates! 🌪️`;
+      }
+
+      if (question.includes('accuracy') || question.includes('reliable') || question.includes('trust') || question.includes('correct')) {
+        return `**Accuracy & Reliability** 🎯
+
+**Weather Data Accuracy:**
+📊 **Current Conditions:** 95-99% accurate
+📅 **24-hour Forecast:** 85-90% accurate
+📆 **3-day Forecast:** 75-80% accurate
+📋 **7-day Forecast:** 60-70% accurate
+
+**Why Accuracy Varies:**
+• Weather is chaotic by nature
+• Longer timeframes = more variables
+• Local factors affect conditions
+• Technology limitations
+
+**Our Data Sources:**
+✅ Professional weather stations
+✅ Government meteorological agencies
+✅ Satellite imagery
+✅ Weather radar networks
+✅ Climate models
+
+**AI Responses:**
+🤖 **AI Explanations:** Educational & conversational
+📚 **Weather Science:** Based on meteorology
+💡 **Advice:** General guidance only
+⚠️ **Critical Decisions:** Verify with official sources
+
+**Best Practices:**
+• Check multiple sources for critical decisions
+• Update forecasts regularly
+• Understand forecast confidence levels
+• Consider local conditions
+
+**Official Sources:**
+For severe weather warnings, always check:
+• Cambodia Department of Meteorology
+• Local news outlets
+• Emergency services
+
+Trust, but verify! 🌤️`;
+      }
+
+      if (question.includes('unique') || question.includes('special') || question.includes('different') || question.includes('why use')) {
+        return `**What Makes WeatherWise AI Unique?** ⭐
+
+**🇰🇭 Cambodia-Focused:**
+• Understands monsoon patterns
+• Regional climate expertise
+• Local weather phenomena
+• Khmer agriculture insights
+• Travel planning assistance
+
+**💬 Conversational Interface:**
+• Ask questions naturally
+• No weather jargon required
+• Follow-up conversations
+• Personalized responses
+• Friendly & educational
+
+**📚 Educational Approach:**
+• Learn while you check weather
+• Understand the "why"
+• Weather science made simple
+• Safety education included
+• Climate awareness
+
+**🆓 Completely Free:**
+• No ads or paywalls
+• No account needed
+• No data collection
+• Unlimited questions
+• Always accessible
+
+**🎯 Smart Features:**
+• Quick action buttons
+• Context-aware responses
+• Location intelligence
+• Forecast explanations
+• Practical advice
+
+**🚀 Modern Technology:**
+• AI-powered conversations
+• Real-time data integration
+• Responsive design
+• Works on any device
+• Fast & reliable
+
+**Perfect For:**
+👨‍🌾 Farmers planning crops
+🏖️ Travelers making plans
+👨‍👩‍👧‍👦 Families staying safe
+🎓 Students learning science
+📱 Everyone checking weather!
+
+Try it and see the difference! 🌈`;
+      }
+
+      if (question.includes('prediction') || question.includes('predict') || question.includes('future weather')) {
+        return `**Weather Prediction Capabilities** 🔮
+
+**What We Can Predict:**
+✅ **Short-term (1-3 days):**
+• Temperature (±2°C accuracy)
+• Precipitation probability
+• Wind conditions
+• General weather patterns
+• Confidence: HIGH
+
+✅ **Medium-term (4-7 days):**
+• Temperature trends
+• Precipitation likelihood
+• General conditions
+• Confidence: MEDIUM
+
+⚠️ **Long-term (8+ days):**
+• General trends only
+• Limited accuracy
+• Confidence: LOW
+
+**How Predictions Work:**
+1. 🛰️ Satellite data collection
+2. 🌡️ Weather station readings
+3. 🖥️ Computer model processing
+4. 📊 Pattern analysis
+5. 🎯 Forecast generation
+
+**What Affects Accuracy:**
+• Distance from weather stations
+• Topography complexity
+• Seasonal patterns
+• Data availability
+• Model limitations
+
+**Best Use Cases:**
+📅 Planning outdoor events (3-5 days ahead)
+🏖️ Travel preparation (1 week ahead)
+🌾 Agricultural planning (seasonal trends)
+👔 Daily outfit decisions (today/tomorrow)
+
+**What We CAN'T Predict:**
+❌ Exact minute rain will start
+❌ Precise temperature at specific times
+❌ Micro-climate variations
+❌ Sudden extreme weather changes
+
+**Pro Tip:**
+Check forecasts daily as your event approaches for the most accurate information! 📱`;
+      }
+
+      // How to Use (Q11-Q15)
+      if (question.includes('getting started') || question.includes('how to start') || question.includes('begin')) {
+        return `**Getting Started with WeatherWise AI** 🚀
+
+**Super Easy - 3 Steps:**
+
+**1️⃣ Open the Chat**
+• Click the WeatherWise AI button
+• The full-screen chat opens
+• See the welcome message
+
+**2️⃣ Start Asking**
+• Type any weather question
+• Use Quick Action buttons
+• Or try suggested topics
+
+**3️⃣ Have a Conversation**
+• Ask follow-up questions
+• Get detailed explanations
+• Learn as you go!
+
+**First-Time Suggestions:**
+
+🌤️ **Try these questions:**
+• "What's the weather today?"
+• "Will it rain tomorrow?"
+• "Tell me about monsoon season"
+• "How do I stay safe in storms?"
+
+🎯 **Use Quick Actions:**
+• Today's Weather ☀️
+• Monsoon Info 🌧️
+• Safety Tips 🛡️
+• Weather Maps 🗺️
+
+**Tips for Best Results:**
+✅ Ask questions naturally
+✅ Be specific about location/time
+✅ Use follow-up questions
+✅ Try different phrasings
+✅ Explore different topics
+
+**Example Conversation:**
+You: "What's the weather like?"
+AI: [Gives current weather]
+You: "Will it rain later?"
+AI: [Gives forecast]
+You: "What should I wear?"
+AI: [Gives clothing advice]
+
+**Need Help?**
+Just ask "Help" or "What can you do?" anytime! 
+
+Ready to explore? Start chatting! 💬`;
+      }
+
+      if (question.includes('what questions') || question.includes('what to ask') || question.includes('examples')) {
+        return `**Question Ideas & Examples** 💡
+
+**Current Weather:**
+• "What's the weather today?"
+• "How hot is it right now?"
+• "Is it raining in Phnom Penh?"
+• "What's the humidity level?"
+• "How strong is the wind?"
+
+**Forecasts:**
+• "Will it rain tomorrow?"
+• "What's the weather this weekend?"
+• "7-day forecast please"
+• "When will this heat end?"
+• "Is a storm coming?"
+
+**Cambodia-Specific:**
+• "When is monsoon season?"
+• "Tell me about wet season"
+• "Best time to visit Cambodia?"
+• "Weather in Siem Reap?"
+• "Typhoon season Cambodia?"
+
+**Educational:**
+• "What causes monsoons?"
+• "How do you predict weather?"
+• "What is humidity?"
+• "Explain weather patterns"
+• "What's the difference between weather and climate?"
+
+**Safety:**
+• "How to stay safe in heat?"
+• "What to do in thunderstorms?"
+• "Flood preparation tips"
+• "Heat stroke prevention"
+• "Emergency weather kit?"
+
+**Practical:**
+• "Should I bring an umbrella?"
+• "Good day for outdoor activities?"
+• "When's sunset today?"
+• "UV index levels?"
+• "Best time for farming?"
+
+**Advanced:**
+• "Explain the jet stream"
+• "How accurate are forecasts?"
+• "Weather vs climate difference?"
+• "Climate change in Cambodia?"
+• "Historical weather data?"
+
+**Conversational:**
+• "Why is it so hot today?"
+• "When will the rain stop?"
+• "Is this normal for December?"
+• "Compare today vs yesterday"
+
+**Just type naturally - I understand! 😊**`;
+      }
+
+      if (question.includes('quick action') || question.includes('buttons') || question.includes('shortcuts')) {
+        return `**Quick Action Buttons Guide** 🎯
+
+**What Are They?**
+The four colorful buttons below the chat are shortcuts for common questions!
+
+**Available Actions:**
+
+☀️ **Today's Weather**
+• Current temperature
+• Conditions & description
+• Humidity & wind
+• Weather advice
+**Use when:** You want instant current weather
+
+🌧️ **Monsoon Info**
+• Wet season details (May-Oct)
+• Dry season details (Nov-Apr)
+• Rainfall patterns
+• Planning tips
+**Use when:** Learning about Cambodia's seasons
+
+🛡️ **Safety Tips**
+• General weather safety
+• Emergency preparedness
+• Health recommendations
+• Storm safety
+**Use when:** Preparing for severe weather
+
+🗺️ **Weather Maps**
+• How to read weather maps
+• Understanding symbols
+• Forecast maps explained
+• Regional patterns
+**Use when:** Learning weather visualization
+
+**How to Use:**
+1. Click any button
+2. Question appears in input field
+3. Response shows immediately
+4. Ask follow-ups if needed
+
+**Benefits:**
+✅ Instant access to common topics
+✅ No typing required
+✅ Mobile-friendly
+✅ Great for beginners
+✅ Consistent answers
+
+**Pro Tip:**
+Use Quick Actions to start, then ask follow-up questions for deeper information! 
+
+**Keyboard Users:**
+You can also just type the questions manually - both work the same! ⌨️`;
+      }
+
+      if (question.includes('conversation') || question.includes('follow-up') || question.includes('chat')) {
+        return `**Having Conversations with WeatherWise AI** 💬
+
+**How It Works:**
+WeatherWise AI remembers context during your session, allowing natural back-and-forth conversations!
+
+**Example Conversation Flow:**
+
+**You:** "What's the weather today?"
+**AI:** [Gives current weather with temp, conditions, etc.]
+
+**You:** "Will it rain later?"
+**AI:** [Checks forecast, gives rain probability]
+
+**You:** "Should I bring an umbrella?"
+**AI:** [Provides practical advice based on forecast]
+
+**You:** "What about tomorrow?"
+**AI:** [Gives tomorrow's forecast]
+
+**Conversation Tips:**
+
+✅ **Ask Follow-ups:**
+• Build on previous answers
+• Go deeper into topics
+• Compare information
+• Request clarifications
+
+✅ **Be Conversational:**
+• Use natural language
+• Don't worry about perfect grammar
+• Ask "why" or "how"
+• Express curiosity
+
+✅ **Request Specifics:**
+• "More details please"
+• "Explain that simply"
+• "What does that mean?"
+• "Can you elaborate?"
+
+✅ **Compare & Contrast:**
+• "How about Siem Reap?"
+• "Compare to yesterday"
+• "Difference between wet and dry season?"
+
+**Features:**
+🧠 Context awareness
+🔄 Multi-turn dialogue
+📚 Educational explanations
+💡 Helpful suggestions
+🎯 Relevant follow-ups
+
+**Session Info:**
+• Conversations last while chat is open
+• Refresh starts new session
+• No history saved (privacy!)
+• Each session is independent
+
+**Best Practices:**
+1. Start with a clear question
+2. Let AI respond fully
+3. Ask follow-ups naturally
+4. Explore related topics
+5. Request explanations
+
+**Can't remember what you asked?**
+Just start a new question - each one works independently too! 😊`;
+      }
+
+      if (question.includes('spelling') || question.includes('typo') || question.includes('mistakes') || question.includes('grammar')) {
+        return `**Don't Worry About Spelling! ✍️**
+
+**WeatherWise AI is Forgiving:**
+I can understand questions even with:
+
+✅ **Spelling mistakes**
+• "waether" → weather
+• "tommorow" → tomorrow
+• "humitidy" → humidity
+• "forcast" → forecast
+
+✅ **Typos**
+• "whats teh weather" → "what's the weather"
+• "will ti rain" → "will it rain"
+
+✅ **Grammar issues**
+• "weather today what"
+• "rain it will tomorrow?"
+• "tell about monsoon"
+
+✅ **Casual language**
+• "gonna rain?"
+• "wanna know weather"
+• "temps today?"
+
+✅ **Abbreviations**
+• "temp" → temperature
+• "humid" → humidity
+• "precip" → precipitation
+• "mph/kph" → wind speed
+
+**How It Works:**
+🤖 AI processes natural language
+🔍 Identifies intent over exact words
+🧠 Understands context
+✨ Focuses on meaning
+
+**Examples That Work:**
+
+❌ **With Mistakes:**
+"waht is wheather in pnom penh?"
+
+✅ **Still Understands:**
+Gives Phnom Penh weather info!
+
+**Tips:**
+• Just type naturally
+• Don't stress about perfection
+• Fix typos if you notice them
+• But no pressure!
+• Focus on your question
+
+**When It Might Not Understand:**
+• Completely jumbled words
+• Missing key terms
+• Extremely shortened text
+• Mixed languages mid-sentence
+
+**If I Don't Understand:**
+I'll ask you to rephrase! Just try saying it differently. 😊
+
+**Bottom Line:**
+Focus on what you want to know, not perfect spelling! I'm here to help, not judge! 💙`;
+      }
+
+      // Current weather responses
+      if (question.includes('today') || question.includes('current') || question.includes('now')) {
+        const weather = currentWeather.value;
+        if (weather) {
+          const temp = Math.round(weather.main.temp);
+          const desc = weather.weather[0].description;
+          const humidity = weather.main.humidity;
+          const wind = weather.wind.speed.toFixed(1);
+          
+          return `**Today's Weather:**
+
+🌡️ **Temperature:** ${temp}°C
+☁️ **Conditions:** ${desc.charAt(0).toUpperCase() + desc.slice(1)}
+💧 **Humidity:** ${humidity}%
+🌬️ **Wind Speed:** ${wind} m/s
+
+${temp > 32 ? '⚠️ It\'s quite hot today! Stay hydrated and avoid prolonged sun exposure.' : ''}
+${humidity > 80 ? '💦 High humidity today - expect it to feel warmer than the actual temperature.' : ''}
+
+Would you like to know about the forecast for the coming days?`;
+        }
+        return `I can provide current weather information once location data is loaded. Try searching for a location first!`;
+      }
+
+      // Forecast responses
+      if (question.includes('forecast') || question.includes('tomorrow') || question.includes('week') || question.includes('coming days')) {
+        if (forecast.value?.list) {
+          const days = {};
+          forecast.value.list.slice(0, 8).forEach(item => {
+            const day = moment(item.dt_txt).format('ddd');
+            if (!days[day]) {
+              days[day] = {
+                temp: Math.round(item.main.temp),
+                desc: item.weather[0].description,
+                rain: Math.round((item.pop || 0) * 100)
+              };
+            }
+          });
+
+          let forecastText = '**7-Day Forecast:**\n\n';
+          Object.keys(days).forEach(day => {
+            const data = days[day];
+            forecastText += `📅 **${day}:** ${data.temp}°C, ${data.desc} (${data.rain}% rain)\n`;
+          });
+
+          forecastText += '\n💡 **Tip:** Pack an umbrella if rain probability is above 50%!';
+          return forecastText;
+        }
+        return 'Forecast data is being loaded. Please try again in a moment!';
+      }
+
+      // Monsoon information
+      if (question.includes('monsoon') || question.includes('wet season') || question.includes('dry season') || question.includes('rainy')) {
+        return `**Cambodia's Monsoon Seasons:**
+
+🌧️ **Wet Season (May - October)**
+• Southwest monsoon brings heavy rainfall
+• Peak rainfall: August - September
+• Average temp: 27-35°C
+• High humidity (80-90%)
+• Afternoon thunderstorms common
+
+☀️ **Dry Season (November - April)**
+• Cool dry period: November - February
+• Hot dry period: March - April
+• Less rainfall (occasional showers)
+• Lower humidity (60-70%)
+• Best time for outdoor activities
+
+**Current Month (December):** We're in the dry season! Expect pleasant weather with cooler temperatures and low rainfall.
+
+💡 **Travel Tip:** The dry season is ideal for visiting Angkor Wat and coastal areas!`;
+      }
+
+      // Safety tips
+      if (question.includes('safety') || question.includes('protect') || question.includes('dangerous') || question.includes('thunderstorm') || question.includes('flood') || question.includes('heat')) {
+        return `**Weather Safety Tips for Cambodia:**
+
+⛈️ **Thunderstorm Safety:**
+• Seek shelter in a sturdy building
+• Avoid trees, water, and metal objects
+• Unplug electronics during lightning
+• Wait 30 minutes after last thunder before going out
+
+🌊 **Flood Safety:**
+• Never drive through floodwater
+• Move to higher ground immediately
+• Avoid riverbanks and drainage areas
+• Follow evacuation orders promptly
+
+🔥 **Extreme Heat Safety:**
+• Stay indoors 11 AM - 3 PM (hottest hours)
+• Drink plenty of water (even if not thirsty)
+• Wear light-colored, loose clothing
+• Check on elderly neighbors
+
+💨 **Strong Wind Safety:**
+• Secure outdoor furniture and items
+• Stay away from windows
+• Avoid tall trees and structures
+• Be cautious of falling debris
+
+📞 **Emergency Numbers:**
+• Emergency: 119
+• Fire & Rescue: 666
+• Police: 117
+• Disaster Management: 1294
+
+Stay safe and always prioritize your well-being!`;
+      }
+
+      // Weather maps
+      if (question.includes('map') || question.includes('radar') || question.includes('read') || question.includes('understand')) {
+        return `**How to Read Weather Maps:**
+
+🗺️ **Temperature Maps:**
+• **Red/Orange:** Hot zones (30°C+)
+• **Yellow/Green:** Moderate (25-30°C)
+• **Blue/Purple:** Cool zones (<25°C)
+• Isotherms show temperature boundaries
+
+☔ **Precipitation Maps:**
+• **Light Blue/Green:** Light rain
+• **Dark Blue:** Moderate rain
+• **Purple:** Heavy rainfall
+• Radar shows rain intensity in real-time
+
+🌀 **Pressure Systems:**
+• **H (High Pressure):** Clear, calm weather
+• **L (Low Pressure):** Clouds, possible storms
+• Isobars show pressure gradients
+• Closer lines = stronger winds
+
+🎯 **Reading Tips:**
+• Check legend for color meanings
+• Look for patterns and fronts
+• Monitor time stamps for currency
+• Compare multiple layers for complete picture
+
+Try our interactive weather map below to practice!`;
+      }
+
+      // Weather phenomena
+      if (question.includes('typhoon') || question.includes('hurricane') || question.includes('cyclone') || question.includes('storm')) {
+        return `**Tropical Cyclones in Cambodia:**
+
+🌀 **What They Are:**
+Typhoons (called hurricanes in other regions) are powerful tropical storms with winds exceeding 119 km/h. They form over warm ocean waters.
+
+📍 **Cambodia's Risk:**
+• Cambodia is generally **protected** from direct typhoon hits
+• Located west of the main typhoon belt
+• May experience **remnants** of storms from South China Sea
+• Coastal areas (Sihanoukville) most vulnerable
+
+⚠️ **Typhoon Season:**
+• Peak: July - November
+• Most storms affect Vietnam/Philippines
+• Cambodia gets heavy rain from distant typhoons
+
+🛡️ **Preparation:**
+• Monitor weather forecasts regularly
+• Stock emergency supplies (food, water, batteries)
+• Secure outdoor items
+• Know evacuation routes
+• Keep phone charged
+
+**Recent History:** Cambodia rarely experiences direct typhoon strikes, but heavy rainfall from nearby systems can cause flooding in low-lying areas.`;
+      }
+
+      // Weather terms
+      if (question.includes('humidity') || question.includes('pressure') || question.includes('uv index') || question.includes('dew point') || question.includes('what is')) {
+        if (question.includes('humidity')) {
+          return `**Understanding Humidity:**
+
+💧 **What is Humidity?**
+The amount of water vapor in the air, expressed as a percentage. 100% means the air is fully saturated.
+
+📊 **Comfort Levels:**
+• **<30%:** Very dry (can cause dry skin)
+• **30-50%:** Comfortable
+• **50-70%:** Slightly humid
+• **70-85%:** Humid (feels muggy)
+• **>85%:** Very humid (uncomfortable)
+
+🌡️ **Why It Matters:**
+• High humidity makes heat feel worse
+• Affects how your body cools through sweat
+• Influences cloud formation and rain
+• Impacts mold growth and air quality
+
+🇰🇭 **Cambodia's Humidity:**
+• Wet Season: 80-90% (very humid!)
+• Dry Season: 60-70% (more comfortable)
+
+Current conditions show above for your location!`;
+        }
+        
+        if (question.includes('pressure') || question.includes('barometric')) {
+          return `**Atmospheric Pressure Explained:**
+
+🔬 **What is It?**
+The weight of air pressing down on Earth's surface, measured in hectopascals (hPa) or millibars (mb).
+
+📊 **Pressure Ranges:**
+• **High Pressure (>1020 hPa):** Clear, calm weather
+• **Normal (1013 hPa):** Standard sea level pressure
+• **Low Pressure (<1000 hPa):** Clouds, possible storms
+
+☁️ **How It Affects Weather:**
+• Rising pressure → Improving weather
+• Falling pressure → Worsening conditions
+• Rapid drops → Storms approaching
+
+🎣 **Fun Fact:**
+Fishermen watch pressure changes! Low pressure makes fish more active and easier to catch.
+
+**Your Location:** Check the current pressure in the weather highlights section!`;
+        }
+
+        if (question.includes('uv') || question.includes('ultraviolet')) {
+          return `**UV Index Guide:**
+
+☀️ **What is UV Index?**
+Measures ultraviolet radiation intensity from the sun. Higher numbers = greater sunburn risk.
+
+📊 **UV Index Scale:**
+• **0-2 (Low):** Minimal protection needed
+• **3-5 (Moderate):** Wear sunscreen
+• **6-7 (High):** Sunscreen + hat required
+• **8-10 (Very High):** Extra protection needed
+• **11+ (Extreme):** Avoid sun if possible
+
+⏰ **Peak Hours:**
+10 AM - 4 PM is when UV radiation is strongest
+
+🧴 **Protection Tips:**
+• Use SPF 30+ sunscreen
+• Reapply every 2 hours
+• Wear sunglasses (UV protection)
+• Seek shade during peak hours
+• Wear protective clothing
+
+🇰🇭 **Cambodia UV Levels:**
+Often reach 8-11 (Very High to Extreme) during dry season, especially March-April!`;
+        }
+      }
+
+      // Regional weather
+      if (question.includes('regional') || question.includes('different') || question.includes('vary') || question.includes('phnom penh') || question.includes('siem reap') || question.includes('sihanoukville')) {
+        return `**Cambodia's Regional Weather Differences:**
+
+🏙️ **Phnom Penh (Capital/Central):**
+• Urban heat island effect
+• 28-35°C typical range
+• Less rainfall than coastal areas
+• Hot season: March-May (38°C+)
+
+🏛️ **Siem Reap (Northwest):**
+• Slightly hotter and drier
+• 27-37°C typical range
+• Less rainfall than south
+• Best weather: November-February
+
+🏖️ **Sihanoukville (Coast):**
+• Sea breeze moderates temperature
+• 25-32°C typical range
+• Highest rainfall in Cambodia
+• More humid year-round
+
+⛰️ **Cardamom Mountains (Southwest):**
+• Coolest region in Cambodia
+• High rainfall (monsoon influence)
+• Lush, tropical climate
+• Biodiversity hotspot
+
+🌾 **Battambang (Northwest Plains):**
+• Agricultural heartland
+• Hot and dry in summer
+• Important rice-growing region
+• Seasonal flooding
+
+💡 **Planning Tip:** Check regional forecasts in our comparison section!`;
+      }
+
+      // General weather questions
+      if (question.includes('what') || question.includes('how') || question.includes('why') || question.includes('explain')) {
+        return `I'd be happy to explain more about weather! Could you be more specific? I can help with:
+
+🌡️ **Weather Basics:** Temperature, humidity, pressure, wind
+☔ **Phenomena:** Monsoons, typhoons, thunderstorms, fog
+🗺️ **Geography:** Regional differences in Cambodia
+📊 **Forecasting:** How predictions are made
+⚠️ **Safety:** How to stay safe in severe weather
+🌍 **Climate:** Long-term patterns and changes
+
+Try asking about any of these topics!`;
+      }
+
+      // Weather Information (Q16-Q20)
+      if (question.includes('cambodia weather') || question.includes('cambodia climate') || question.includes('cambodia specific')) {
+        return `**Cambodia Weather & Climate** 🇰🇭
+
+**General Climate:**
+🌴 **Tropical Monsoon Climate**
+• Hot year-round (25-35°C)
+• Two distinct seasons
+• High humidity (70-90%)
+• Coastal & inland variations
+
+**Two Main Seasons:**
+
+🌧️ **Wet Season (May-October)**
+• Heavy afternoon/evening rain
+• Peak: August-September
+• 1,400-1,700mm rainfall
+• High humidity (80-90%)
+• Occasional flooding
+• Lush green landscapes
+
+☀️ **Dry Season (November-April)**
+• Cool dry: November-February (25-30°C)
+• Hot dry: March-April (32-38°C)
+• Little to no rain
+• Lower humidity (60-75%)
+• Best for tourism
+• Harvest season
+
+**Regional Variations:**
+
+🏖️ **Coastal (Sihanoukville, Kep):**
+• Sea breezes moderate temp
+• High humidity
+• Cooler than inland
+
+🏔️ **Mountains (Ratanakiri, Mondulkiri):**
+• Cooler temperatures
+• More rainfall
+• Misty mornings
+
+🏙️ **Central Plains (Phnom Penh):**
+• Hottest region
+• Urban heat island effect
+• Monsoon flooding risk
+
+**Best Time to Visit:**
+🎯 November-February (cool, dry, perfect!)
+
+Want to know more about a specific region or season?`;
+      }
+
+      if (question.includes('forecast accuracy') || question.includes('how accurate') || question.includes('forecast reliable')) {
+        return `**Forecast Accuracy Explained** 📊
+
+**Accuracy by Timeframe:**
+
+**Today (0-12 hours):**
+🎯 95-99% accurate
+• Most reliable
+• Minor adjustments only
+• Great for planning
+
+**Tomorrow (12-36 hours):**
+🎯 85-90% accurate
+• Very reliable
+• Temperature within 2-3°C
+• Precipitation 80% reliable
+
+**2-3 Days Ahead:**
+🎯 75-85% accurate
+• Generally reliable
+• Temperature within 3-4°C
+• Conditions mostly correct
+
+**4-7 Days Ahead:**
+🎯 60-75% accurate
+• Trends reliable
+• Specific details less certain
+• Good for general planning
+
+**8-14 Days Ahead:**
+🎯 50-60% accurate
+• General trends only
+• Specific forecasts unreliable
+• Climate averages more useful
+
+**Why Accuracy Decreases:**
+1. 🌪️ Atmosphere is chaotic
+2. 🦋 "Butterfly effect" compounds
+3. 📊 Model limitations
+4. 🌐 Limited data points
+5. ⏰ More time = more uncertainty
+
+**Most Accurate Predictions:**
+✅ Temperature trends
+✅ Pressure systems
+✅ Large-scale patterns
+✅ Seasonal changes
+
+**Least Accurate:**
+❌ Exact rain start time
+❌ Microclimate details
+❌ Sudden severe weather
+❌ Long-range specifics
+
+**Pro Tips:**
+💡 Check forecasts daily
+💡 Look at trends, not just numbers
+💡 Use multiple sources
+💡 Understand confidence levels
+💡 Have backup plans!
+
+**Remember:**
+Weather is dynamic - forecasts are predictions, not guarantees! 🌤️`;
+      }
+
+      if (question.includes('location specific') || question.includes('my location') || question.includes('local weather')) {
+        return `**Location-Specific Information** 📍
+
+**How It Works:**
+
+**Automatic Detection:**
+🌐 Uses your browser's geolocation
+📍 Pinpoints your coordinates
+🗺️ Finds nearest weather station
+⚡ Loads local data automatically
+
+**Manual Search:**
+🔍 Use the search bar
+🏙️ Type city name
+🌍 Select from results
+✅ Get specific location weather
+
+**Available Locations:**
+
+**Cambodia Cities:**
+🇰🇭 Phnom Penh
+🇰🇭 Siem Reap
+🇰🇭 Sihanoukville
+🇰🇭 Battambang
+🇰🇭 Kampot
+🇰🇭 And more!
+
+**Worldwide:**
+🌍 Any major city
+🌏 Most towns globally
+🗺️ Thousands of locations
+
+**Location Data Includes:**
+
+✅ Current temperature
+✅ Weather conditions
+✅ Humidity & pressure
+✅ Wind speed/direction
+✅ Sunrise/sunset times
+✅ 7-day forecast
+✅ Hourly predictions
+✅ Air quality (where available)
+
+**Accuracy Factors:**
+
+🎯 **Urban Areas:**
+• Most accurate
+• Multiple stations
+• Frequent updates
+
+🏞️ **Rural Areas:**
+• Less precise
+• Fewer stations
+• Interpolated data
+
+🏔️ **Mountains:**
+• Microclimates vary
+• Station dependent
+• Elevation matters
+
+**Privacy:**
+🔒 Location not stored
+🔒 No tracking
+🔒 Just for weather data
+🔒 Your choice to share
+
+**Tips:**
+💡 Allow location for best results
+💡 Search manually if needed
+💡 Update location when traveling
+💡 Check nearby cities for comparison
+
+**Troubleshooting:**
+❌ Location blocked? Enable in browser settings
+❌ Wrong location? Search manually
+❌ No data? Try nearby larger city
+
+Need help with a specific location? Just ask! 🗺️`;
+      }
+
+      if (question.includes('severe weather') || question.includes('alerts') || question.includes('warnings') || question.includes('emergency')) {
+        return `**Severe Weather Alerts & Safety** ⚠️
+
+**Alert Types:**
+
+🚨 **Extreme (Red):**
+• Typhoons/cyclones
+• Severe flooding
+• Extreme heat waves
+• Dangerous thunderstorms
+**Action:** Immediate shelter, follow authorities
+
+⚠️ **Severe (Orange):**
+• Heavy rainfall
+• Strong winds
+• Flash flood risk
+• Heat advisories
+**Action:** Prepare, stay alert, limit outdoor activity
+
+⚡ **Moderate (Yellow):**
+• Thunderstorms
+• Heavy showers
+• Moderate winds
+• Temperature extremes
+**Action:** Monitor conditions, take precautions
+
+**Where We Get Alerts:**
+
+🌐 **Official Sources:**
+• Cambodia Department of Meteorology
+• Regional weather services
+• International weather agencies
+• Satellite monitoring
+
+**What Alerts Include:**
+
+✅ Event type & severity
+✅ Affected areas
+✅ Start/end times
+✅ Expected impacts
+✅ Safety recommendations
+✅ Update frequency
+
+**Cambodia Specific Risks:**
+
+🌊 **Monsoon Flooding (June-October):**
+• Mekong River flooding
+• Urban drainage issues
+• Rural inundation
+• Landslides in mountains
+
+🌀 **Tropical Systems (October-November):**
+• Indirect typhoon effects
+• Heavy rainfall
+• Strong winds
+• Coastal surges
+
+🔥 **Extreme Heat (March-May):**
+• Temperatures 35-40°C
+• High UV index
+• Heat-related illness risk
+• Drought conditions
+
+**Safety Actions:**
+
+**Before Severe Weather:**
+✅ Monitor forecasts daily
+✅ Prepare emergency kit
+✅ Know evacuation routes
+✅ Charge devices
+✅ Stock supplies
+
+**During Severe Weather:**
+✅ Stay indoors
+✅ Follow official guidance
+✅ Avoid flood water
+✅ Stay away from windows
+✅ Keep updated
+
+**After Severe Weather:**
+✅ Check for damage
+✅ Avoid hazards
+✅ Help neighbors safely
+✅ Report emergencies
+✅ Follow recovery guidance
+
+**Emergency Kit:**
+💧 Water (3-day supply)
+🍜 Non-perishable food
+💊 First aid & medications
+🔦 Flashlight & batteries
+📱 Phone & charger
+📻 Battery radio
+💵 Cash
+📄 Important documents
+
+**IMPORTANT:**
+⚠️ WeatherWise AI provides general information only
+⚠️ For official warnings, check:
+    • Cambodia National Committee for Disaster Management
+    • Local authorities
+    • Emergency services
+
+**Your safety is paramount - when in doubt, seek shelter and follow official guidance! 🛡️**`;
+      }
+
+      if (question.includes('weather vs climate') || question.includes('difference between') || question.includes('climate change')) {
+        return `**Weather vs Climate** 🌍
+
+**Simple Definition:**
+
+**Weather:**
+☁️ Short-term atmospheric conditions
+⏰ Changes hour-to-hour, day-to-day
+📍 Specific location
+🎯 What you experience now
+
+**Climate:**
+🌡️ Long-term weather patterns
+📅 Averaged over 30+ years
+🗺️ Regional to global
+📊 What you expect
+
+**Key Differences:**
+
+**Weather:**
+• "It's raining today"
+• Temperature right now
+• This week's forecast
+• Today's humidity
+• Current wind speed
+
+**Climate:**
+• "Rainy season: May-October"
+• Average monthly temperatures
+• Seasonal patterns
+• Historical humidity ranges
+• Prevailing wind directions
+
+**Analogy:**
+💡 **Weather** = Your mood today
+💡 **Climate** = Your personality
+
+**Cambodia Examples:**
+
+**Weather:**
+"It's 32°C and sunny in Phnom Penh right now"
+"Heavy rain expected this afternoon"
+"Cool morning at 24°C"
+
+**Climate:**
+"Cambodia has a tropical monsoon climate"
+"Wet season averages 200mm rain per month"
+"Temperatures range 25-35°C year-round"
+
+**Why It Matters:**
+
+**Use Weather For:**
+📅 Daily planning
+👔 Outfit decisions
+🚗 Travel timing
+🏖️ Outdoor activities
+
+**Use Climate For:**
+🌾 Agricultural planning
+🏗️ Building design
+📚 Historical understanding
+✈️ Seasonal travel booking
+
+**Climate Change:**
+🌍 Long-term shifts in climate patterns
+📈 Global temperature increase
+🌊 Rising sea levels
+⚠️ More extreme weather events
+🔄 Changing seasonal patterns
+
+**In Cambodia:**
+• Longer, hotter dry seasons
+• More intense rainfall
+• Shifting monsoon timing
+• Increased flood risk
+• Agricultural impacts
+
+**Remember:**
+🎯 Weather = What to wear today
+🎯 Climate = What clothes to own
+
+**Want to know more?**
+Ask about specific weather conditions or climate patterns! 🌤️`;
+      }
+
+      // Technical Questions (Q21-Q25)
+      if (question.includes('technology') || question.includes('how does it work') || question.includes('technical') || question.includes('built with')) {
+        return `**Technology Behind WeatherWise AI** 💻
+
+**Frontend Technology:**
+⚛️ **Vue.js 3**
+• Modern JavaScript framework
+• Component-based architecture
+• Reactive data binding
+• Fast & efficient
+
+**AI Integration:**
+🤖 **Claude AI (Anthropic)**
+• Advanced language model
+• Natural conversation
+• Context understanding
+• Educational responses
+
+**Weather Data:**
+🌐 **Weather APIs**
+• Real-time data feeds
+• Global coverage
+• Multiple data sources
+• Professional-grade
+
+**Design Stack:**
+🎨 CSS3 & SCSS
+📱 Responsive design
+✨ Modern animations
+🎯 Accessibility features
+
+**How It Works:**
+
+**1. You Ask a Question:**
+💬 Type in natural language
+🎯 Click quick action button
+
+**2. AI Processes:**
+🧠 Understands intent
+📊 Accesses weather data
+🔍 Finds relevant info
+💡 Generates response
+
+**3. Data Integration:**
+🌐 Fetches live weather
+📍 Location-based data
+🔄 Real-time updates
+📊 Forecast analysis
+
+**4. Response Delivery:**
+✨ Formatted beautifully
+📚 Educational content
+💬 Conversational tone
+🎯 Actionable advice
+
+**Architecture:**
+
+**Client Side:**
+• Browser-based application
+• No server-side processing
+• Fast loading
+• Offline-capable (coming soon)
+
+**Data Flow:**
+User → AI → Weather API → Response → User
+
+**Performance:**
+⚡ Fast response times (<2 seconds)
+🚀 Optimized loading
+📱 Mobile-first design
+🌐 Cross-browser compatible
+
+**Security:**
+🔒 HTTPS encryption
+🔒 No data storage
+🔒 Privacy-focused
+🔒 Secure API calls
+
+**Future Plans:**
+🚀 Voice interactions
+🚀 Offline mode
+🚀 Mobile app
+🚀 More AI features
+🚀 Custom themes
+
+**Open Source?**
+Currently not open source, but we're considering it! 
+
+**Want technical details on a specific feature? Ask away! 🎓**`;
+      }
+
+      if (question.includes('offline') || question.includes('no internet') || question.includes('work without connection')) {
+        return `**Offline Capabilities** 📶
+
+**Current Status:**
+❌ **Not Available Offline (Yet!)**
+
+**Why?**
+WeatherWise AI requires:
+• 🌐 Real-time weather data
+• 🤖 AI processing
+• 🔄 Live API connections
+• ☁️ Cloud-based services
+
+**What Needs Internet:**
+🌡️ Current weather conditions
+📊 Forecast updates
+🤖 AI responses
+🗺️ Location services
+🔄 Data synchronization
+
+**Coming Soon:**
+🚀 **Planned Offline Features:**
+
+✅ **Cached Data:**
+• Last known weather
+• Recent forecasts
+• Saved locations
+• Historical data
+
+✅ **Educational Content:**
+• Weather guides
+• Safety tips
+• How-to articles
+• Climate information
+
+✅ **Basic Features:**
+• View saved data
+• Read FAQs
+• Access help
+• Browse history
+
+**Workarounds:**
+
+**Before Going Offline:**
+1. ✅ Check weather fully
+2. 📸 Take screenshots
+3. 📝 Note important info
+4. 💾 Save forecasts mentally
+
+**Limited Connection:**
+🌐 Works on:
+• Slow 3G/4G
+• Spotty WiFi
+• Limited data plans
+• Rural connections
+
+**Data Usage:**
+📊 Very light:
+• ~1-2 MB per session
+• Mostly text data
+• Optimized images
+• Minimal bandwidth
+
+**Offline Alternatives:**
+📱 Download weather apps with offline mode
+📻 Listen to radio forecasts
+📺 Check TV weather
+📰 Read printed forecasts
+
+**Why Offline Matters:**
+We understand many areas have limited connectivity, especially:
+• Rural Cambodia
+• During storms (ironically!)
+• While traveling
+• In remote areas
+
+**We're Working On It!**
+Offline mode is high priority for future updates! 🎯
+
+**Stay Tuned:**
+• Progressive Web App (PWA)
+• Offline data caching
+• Background sync
+• Mobile app version
+
+**For Now:**
+Check weather when you have connection, then plan accordingly! 📱
+
+Questions about data usage or connectivity? Ask me! 💬`;
+      }
+
+      if (question.includes('customization') || question.includes('customize') || question.includes('personalize') || question.includes('settings')) {
+        return `**Customization Options** 🎨
+
+**Current Customization:**
+
+**🌐 Location Settings:**
+✅ Set default location
+✅ Save favorite places
+✅ Multiple locations
+✅ Auto-detection toggle
+
+**📊 Display Preferences:**
+✅ Temperature units (°C/°F)
+✅ Wind speed (m/s, km/h, mph)
+✅ Time format (12/24 hour)
+✅ Date format
+
+**🎯 Quick Actions:**
+✅ Four customizable buttons
+✅ Frequently asked topics
+✅ Personalized shortcuts
+
+**Coming Soon:**
+
+**🎨 Theme Options:**
+🌈 Color schemes
+🌙 Dark/Light mode
+🎯 Contrast settings
+♿ Accessibility options
+
+**📱 Notifications:**
+🔔 Weather alerts
+⏰ Daily forecasts
+⚠️ Severe weather
+🌡️ Temperature thresholds
+
+**📊 Advanced Settings:**
+📈 Detailed vs. simple mode
+🔢 Metric vs. imperial
+🗺️ Map preferences
+📉 Graph styles
+
+**🌍 Language:**
+🇬🇧 English (current)
+🇰🇭 Khmer (coming)
+🌐 More languages planned
+
+**💬 Conversation Style:**
+🎓 Educational vs. brief
+🤝 Casual vs. formal
+📊 Technical vs. simple
+
+**How to Customize:**
+
+**Currently:**
+• Use search for locations
+• Ask preferences in questions
+• AI remembers context in session
+
+**Future (Settings Panel):**
+⚙️ Access via settings icon
+📋 Choose preferences
+💾 Save configurations
+🔄 Sync across devices
+
+**Privacy-Friendly:**
+• Settings stored locally
+• No account required
+• No tracking
+• Your data, your device
+
+**User Profiles (Planned):**
+👨‍🌾 **Farmer Mode:**
+• Agricultural focus
+• Rain predictions
+• Planting advice
+• Seasonal info
+
+🏖️ **Traveler Mode:**
+• Tourism insights
+• Best times
+• Activity suggestions
+• Multi-city comparison
+
+👨‍👩‍👧‍👦 **Family Mode:**
+• Simple language
+• Safety focus
+• Kid-friendly
+• Activity planning
+
+📚 **Student Mode:**
+• Educational content
+• Detailed explanations
+• Weather science
+• Learning resources
+
+**Accessibility:**
+♿ **Planned Features:**
+• Screen reader support
+• High contrast mode
+• Font size adjustment
+• Keyboard navigation
+• Voice commands
+
+**Your Feedback:**
+Want specific customization options? Let us know what would make WeatherWise AI better for you! 💡
+
+**Remember:**
+Even without extensive settings now, you can ask the AI to explain things differently - "explain simply" or "more details please"! 😊`;
+      }
+
+      if (question.includes('website integration') || question.includes('embed') || question.includes('add to website') || question.includes('widget')) {
+        return `**Website Integration** 🌐
+
+**Integration Options:**
+
+**🔗 Embed Widget:**
+📦 **Coming Soon!**
+• Drop-in weather widget
+• Customizable size
+• Match your site theme
+• Simple code snippet
+
+**Example Use Cases:**
+• Travel websites
+• Agricultural portals
+• News websites
+• Educational sites
+• Government pages
+• Tourism platforms
+
+**📱 API Access (Planned):**
+🔌 **For Developers:**
+• RESTful API
+• JSON responses
+• Real-time data
+• Documentation
+• Rate limits
+• Free tier available
+
+**🎨 Customizable Features:**
+
+**Widget Options:**
+✅ Size (small/medium/large)
+✅ Color scheme
+✅ Language
+✅ Location default
+✅ Data displayed
+✅ Update frequency
+
+**Data Available:**
+🌡️ Current temperature
+📊 Forecasts
+💨 Wind info
+💧 Humidity
+☔ Precipitation
+📍 Multi-location
+
+**💻 Implementation:**
+
+**Simple Embed:**
+\`\`\`html
+<div id="weatherwise-widget"><\/div>
+<script src="weatherwise-embed.js"><\/script>
+\`\`\`
+
+**Advanced Options:**
+\`\`\`javascript
+WeatherWise.init({
+  location: 'Phnom Penh',
+  theme: 'light',
+  units: 'metric',
+  language: 'en'
+});
+\`\`\`
+
+**📋 Requirements:**
+✅ Modern browser support
+✅ JavaScript enabled
+✅ HTTPS recommended
+✅ API key (for high volume)
+
+**🎯 Benefits:**
+
+**For Your Site:**
+• Enhanced user value
+• Weather information
+• Professional appearance
+• Up-to-date data
+• No maintenance
+
+**For Users:**
+• Convenient access
+• Consistent interface
+• Trusted source
+• Educational content
+
+**💰 Pricing:**
+
+**Free Tier:**
+✅ Up to 1,000 requests/day
+✅ Basic widget
+✅ Community support
+✅ Standard features
+
+**Premium (Coming):**
+🌟 Unlimited requests
+🌟 Advanced widgets
+🌟 Priority support
+🌟 Custom branding
+🌟 API access
+🌟 Analytics
+
+**📚 Documentation:**
+📖 **Will Include:**
+• Installation guide
+• Code examples
+• API reference
+• Best practices
+• Troubleshooting
+• Video tutorials
+
+**🚀 Coming Features:**
+
+**Smart Integration:**
+🤖 AI-powered suggestions
+🎯 User behavior learning
+📊 Analytics integration
+🔔 Custom alerts
+🗺️ Interactive maps
+
+**🛠️ Technical Support:**
+• Developer forum
+• Email support
+• Code examples
+• Sample implementations
+• Testing sandbox
+
+**⚖️ Terms of Use:**
+✅ Attribution required (free tier)
+✅ Non-commercial friendly
+✅ Commercial licenses available
+✅ Fair use policy
+
+**🎓 Ideal For:**
+
+**Education:**
+🏫 School websites
+📚 Learning platforms
+🎓 Research projects
+
+**Business:**
+🏢 Corporate intranets
+🌾 Agriculture platforms
+✈️ Travel agencies
+🏨 Hospitality sites
+
+**Government:**
+🏛️ Public information
+🚨 Emergency services
+🏘️ Community portals
+
+**Interest in Integration?**
+Join our waiting list for early access! Contact us with your use case and we'll prioritize features you need! 📧
+
+**Developer?**
+We're looking for beta testers for our API - get involved! 💻`;
+      }
+
+      if (question.includes('real weather api') || question.includes('actual data') || question.includes('data source') || question.includes('api provider')) {
+        return `**Real Weather API Integration** 🌐
+
+**Current Data Sources:**
+
+**Primary APIs:**
+🌤️ **OpenWeatherMap**
+• Global coverage
+• Real-time updates
+• 5-day forecasts
+• Historical data
+• Professional grade
+
+☁️ **Weather Services**
+• Multiple providers
+• Redundancy backup
+• Data validation
+• Quality assurance
+
+**🔄 Data Integration:**
+
+**How We Get Data:**
+1. 🌍 Location coordinates
+2. 🔌 API request
+3. 📊 Data processing
+4. ✨ AI enhancement
+5. 💬 Response formatting
+
+**Update Frequency:**
+⏰ Current weather: Every 10-15 minutes
+📅 Forecasts: Every 3-6 hours
+🗺️ Maps: Every hour
+⚠️ Alerts: Real-time
+
+**📊 Data Types:**
+
+**Real-Time:**
+✅ Temperature (actual & feels-like)
+✅ Humidity percentage
+✅ Atmospheric pressure
+✅ Wind speed & direction
+✅ Cloud coverage
+✅ Visibility
+✅ UV index
+✅ Precipitation
+
+**Forecast Data:**
+✅ Temperature predictions
+✅ Weather conditions
+✅ Precipitation probability
+✅ Wind forecasts
+✅ Humidity trends
+✅ Hourly breakdowns
+✅ Daily summaries
+
+**Historical:**
+✅ Past weather data
+✅ Climate averages
+✅ Seasonal patterns
+✅ Long-term trends
+
+**🎯 Data Accuracy:**
+
+**Validation:**
+🔍 Multiple source verification
+📊 Statistical analysis
+🌐 Cross-reference checking
+✅ Quality control
+
+**Station Network:**
+• Thousands of weather stations
+• Satellite data integration
+• Radar information
+• Ocean buoys
+• Airport stations
+
+**🇰🇭 Cambodia Coverage:**
+
+**Weather Stations:**
+📍 Phnom Penh
+📍 Siem Reap
+📍 Sihanoukville
+📍 Battambang
+📍 Regional stations
+📍 Rural monitoring
+
+**Data Resolution:**
+🎯 Urban: High precision
+🏞️ Rural: Interpolated
+⛰️ Mountains: Estimated
+🌊 Coastal: Detailed
+
+**⚡ API Performance:**
+
+**Speed:**
+• < 1 second response
+• Cached for efficiency
+• Global CDN delivery
+• Optimized queries
+
+**Reliability:**
+• 99.9% uptime
+• Automatic failover
+• Multiple backups
+• Error handling
+
+**📋 Technical Details:**
+
+**API Endpoints:**
+🔌 Current weather
+🔌 Forecast data
+🔌 Historical records
+🔌 Weather maps
+🔌 Alerts/warnings
+
+**Data Format:**
+📄 JSON responses
+📊 Standardized structure
+🔢 Metric & imperial units
+🌐 Multiple languages
+
+**Rate Limits:**
+✅ Reasonable limits
+✅ Free tier generous
+✅ Premium available
+✅ Cached responses
+
+**🔐 Security:**
+
+**Data Protection:**
+🔒 HTTPS encryption
+🔒 API key security
+🔒 No personal data
+🔒 Privacy compliant
+
+**📈 Advanced Features:**
+
+**Coming Soon:**
+🚀 Radar imagery
+🚀 Satellite photos
+🚀 Lightning detection
+🚀 Air quality data
+🚀 Pollen counts
+🚀 Marine forecasts
+
+**🎓 For Developers:**
+
+**Want to Use Our Data?**
+• API documentation available
+• Developer-friendly
+• Code examples
+• Testing environment
+• Community support
+
+**Build Your Own:**
+• Use same data sources
+• OpenWeatherMap API
+• Weather.gov (US)
+• Met Office (UK)
+• Local services
+
+**💡 Pro Tips:**
+
+**Understanding Data:**
+• Forecasts are predictions
+• Models have limitations
+• Local conditions vary
+• Update regularly
+• Use multiple sources
+
+**Best Practices:**
+✅ Cache when possible
+✅ Handle errors gracefully
+✅ Respect rate limits
+✅ Validate data
+✅ Provide fallbacks
+
+**Questions about specific data points? Ask away! 📊**`;
+      }
+
+      // User Authentication
+      if (question.includes('authentication') || question.includes('login') || question.includes('sign up') || question.includes('register') || question.includes('account') || question.includes('user account')) {
+        return `**User Authentication System** 🔐
+
+**Current Status:**
+🟢 **No Account Required!**
+WeatherWise AI works without any login or registration!
+
+**Why No Account?**
+✅ Instant access - just start using
+✅ Privacy first - no personal data collected
+✅ No passwords to remember
+✅ Works on any device immediately
+✅ Zero setup required
+
+**Coming Soon - Optional Accounts:**
+
+**🔑 Account Benefits (Planned):**
+
+**Profile Features:**
+👤 Personal profile
+📍 Saved favorite locations
+⚙️ Custom preferences
+📱 Sync across devices
+📊 Weather history
+
+**Personalization:**
+🎨 Theme preferences
+🌡️ Temperature unit preference
+🔔 Custom notification settings
+📍 Multiple saved locations
+⭐ Favorite weather widgets
+
+**Security Features:**
+🔒 Secure password hashing
+🔐 Two-factor authentication (2FA)
+📧 Email verification
+🛡️ Data encryption
+🔄 Password recovery
+
+**Sign-Up Options (Planned):**
+📧 Email registration
+🔵 Google Sign-In
+📘 Facebook Login
+🍎 Apple ID
+📱 Phone number
+
+**What We'll Store:**
+✅ Email (for account recovery)
+✅ Preferred locations
+✅ Display preferences
+✅ Notification settings
+❌ Never: passwords in plain text
+❌ Never: sensitive personal data
+❌ Never: location history tracking
+
+**Privacy Promise:**
+🛡️ Minimal data collection
+🗑️ Easy account deletion
+📋 Data export available
+🔒 GDPR compliant
+🚫 No data selling
+
+**For Now:**
+Enjoy full features without an account! When accounts launch, they'll be completely optional with added benefits. 
+
+**Your data, your choice! 💙**`;
+      }
+
+      // Weather Dashboard
+      if (question.includes('dashboard') || question.includes('weather dashboard') || question.includes('main screen') || question.includes('home screen')) {
+        return `**Weather Dashboard Overview** 📊
+
+**Your Personal Weather Hub:**
+The Weather Dashboard provides a comprehensive view of all weather information at a glance!
+
+**Dashboard Components:**
+
+**🌡️ Current Weather Card:**
+• Real-time temperature
+• Weather conditions
+• "Feels like" temperature
+• High/low for today
+• Weather icon animation
+
+**📊 Forecast Section:**
+• 7-day forecast
+• Temperature trends
+• Precipitation probability
+• Weather icons
+• Daily summaries
+
+**⏰ Hourly Forecast:**
+• Next 24 hours
+• Temperature curve
+• Rain/snow probability
+• Wind changes
+• Best activity times
+
+**💨 Weather Details:**
+• Wind speed & direction
+• Humidity percentage
+• Atmospheric pressure
+• Visibility distance
+• UV index
+
+**🌅 Sun & Moon:**
+• Sunrise time
+• Sunset time
+• Moon phase
+• Daylight duration
+• Golden hour times
+
+**🗺️ Weather Map:**
+• Radar imagery
+• Cloud coverage
+• Temperature map
+• Precipitation map
+• Wind patterns
+
+**⚠️ Alerts Section:**
+• Severe weather warnings
+• Government alerts
+• Health advisories
+• Travel impacts
+• Safety recommendations
+
+**📍 Location Management:**
+• Current location weather
+• Saved locations
+• Quick location switch
+• Location comparison
+• Add new locations
+
+**🎯 Quick Actions:**
+• Refresh data
+• Share weather
+• Set alerts
+• Change units
+• Access AI assistant
+
+**Customization Options:**
+
+**Widget Arrangement:**
+✅ Drag & drop widgets
+✅ Show/hide sections
+✅ Resize components
+✅ Choose layout style
+✅ Color themes
+
+**Data Display:**
+✅ Metric/Imperial units
+✅ 12/24 hour time
+✅ Detailed/Simple mode
+✅ Graph preferences
+✅ Icon styles
+
+**Dashboard Themes:**
+
+🌙 **Dark Mode:**
+• Easy on eyes at night
+• Battery saving (OLED)
+• Sleek appearance
+
+☀️ **Light Mode:**
+• Clear visibility
+• Daytime friendly
+• Professional look
+
+🎨 **Custom Themes:**
+• Weather-based auto
+• Seasonal themes
+• Color customization
+
+**Mobile Dashboard:**
+📱 Responsive design
+📱 Touch-friendly
+📱 Swipe navigation
+📱 Compact widgets
+📱 Quick access
+
+**Desktop Dashboard:**
+🖥️ Full-width layout
+🖥️ Multiple columns
+🖥️ Detailed graphs
+🖥️ Keyboard shortcuts
+🖥️ Large map view
+
+**Pro Tips:**
+💡 Pin important widgets to top
+💡 Use dark mode at night
+💡 Enable auto-refresh
+💡 Customize for your needs
+💡 Check dashboard daily!
+
+**Explore your dashboard now! 🚀**`;
+      }
+
+      // Personalized Locations
+      if (question.includes('personalized location') || question.includes('saved location') || question.includes('favorite location') || question.includes('my location') || question.includes('add location') || question.includes('multiple location')) {
+        return `**Personalized Locations** 📍
+
+**Manage Your Weather Locations:**
+Save and organize all the places you care about!
+
+**Location Features:**
+
+**📍 Current Location:**
+• Auto-detect via GPS
+• One-click update
+• Always accessible
+• Privacy controls
+• Manual override
+
+**⭐ Favorite Locations:**
+• Save unlimited places
+• Quick access list
+• Custom nicknames
+• Organized groups
+• Priority ordering
+
+**Location Types:**
+
+**🏠 Home:**
+• Primary location
+• Default on app open
+• Morning briefings
+• Evening summaries
+• Commute weather
+
+**🏢 Work:**
+• Office location
+• Work hours focus
+• Commute planning
+• Lunch break weather
+• End-of-day forecast
+
+**✈️ Travel:**
+• Trip destinations
+• Vacation spots
+• Business travel
+• Weekend getaways
+• Future plans
+
+**👨‍👩‍👧‍👦 Family:**
+• Parents' location
+• Kids' school
+• Relatives abroad
+• Check on loved ones
+• Emergency awareness
+
+**🏖️ Activities:**
+• Favorite beach
+• Hiking spots
+• Sports venues
+• Event locations
+• Outdoor activities
+
+**How to Add Locations:**
+
+**Method 1 - Search:**
+1. 🔍 Click search bar
+2. ⌨️ Type city name
+3. 📋 Select from results
+4. ⭐ Click "Save"
+5. ✅ Done!
+
+**Method 2 - Map:**
+1. 🗺️ Open weather map
+2. 📍 Click location
+3. ➕ Add to favorites
+4. 📝 Name it
+5. ✅ Saved!
+
+**Method 3 - Coordinates:**
+1. ⚙️ Go to settings
+2. 📍 Add location
+3. 🔢 Enter lat/long
+4. 📝 Add name
+5. ✅ Complete!
+
+**Location Management:**
+
+**Organize:**
+📁 Create groups/folders
+🏷️ Add custom labels
+⬆️ Set priority order
+🔄 Drag to rearrange
+🗑️ Remove easily
+
+**Compare:**
+📊 Side-by-side weather
+🌡️ Temperature comparison
+☔ Rain probability compare
+📅 Week forecast comparison
+📈 Trend analysis
+
+**Alerts Per Location:**
+🔔 Custom alerts each place
+⚠️ Severe weather warnings
+🌡️ Temperature thresholds
+☔ Rain notifications
+📱 Push notifications
+
+**Location Data:**
+Each saved location shows:
+✅ Current temperature
+✅ Weather conditions
+✅ Today's forecast
+✅ Quick 3-day outlook
+✅ Active alerts
+
+**Smart Features:**
+
+**🤖 Auto-Suggestions:**
+• Frequent searches saved
+• Recent locations
+• Popular destinations
+• Nearby cities
+• Trending locations
+
+**📅 Scheduled Checks:**
+• Morning weather (home)
+• Commute time (route)
+• Lunch break (work)
+• Evening (home)
+• Weekend (activities)
+
+**🔄 Sync Options:**
+• Cloud backup
+• Cross-device sync
+• Export/import
+• Share with family
+• Backup locally
+
+**Privacy:**
+🔒 Locations stored locally first
+🔒 Cloud sync optional
+🔒 No tracking history
+🔒 Easy deletion
+🔒 Your data, your control
+
+**Cambodia Popular Locations:**
+🇰🇭 Phnom Penh
+🇰🇭 Siem Reap
+🇰🇭 Sihanoukville
+🇰🇭 Battambang
+🇰🇭 Kampot
+🇰🇭 Kep
+🇰🇭 Mondulkiri
+🇰🇭 Ratanakiri
+
+**Start adding your favorite places! 🌍**`;
+      }
+
+      // Intelligent Alert System
+      if (question.includes('alert') || question.includes('notification') || question.includes('warning') || question.includes('intelligent alert') || question.includes('weather alert')) {
+        return `**Intelligent Alert System** 🔔
+
+**Stay Informed, Stay Safe:**
+Our smart alert system keeps you ahead of weather changes!
+
+**Alert Types:**
+
+**🚨 Severe Weather Alerts:**
+• Typhoons & cyclones
+• Severe thunderstorms
+• Flash flood warnings
+• Extreme heat warnings
+• Heavy rainfall alerts
+• Strong wind advisories
+
+**⚠️ Weather Warnings:**
+• Rain expected
+• Temperature drops
+• High humidity
+• Poor visibility
+• Air quality issues
+• UV index warnings
+
+**💡 Smart Notifications:**
+• Best time for outdoor activities
+• Umbrella reminder
+• Clothing suggestions
+• Travel conditions
+• Event weather updates
+
+**Alert Categories:**
+
+**🔴 Critical (Immediate Action):**
+• Life-threatening conditions
+• Evacuate recommendations
+• Shelter in place
+• Emergency services contact
+• Real-time updates
+
+**🟠 Severe (Prepare Now):**
+• Significant weather event
+• Next 6-12 hours
+• Prepare supplies
+• Limit outdoor exposure
+• Monitor updates
+
+**🟡 Moderate (Be Aware):**
+• Weather changes coming
+• Next 12-24 hours
+• Plan accordingly
+• Stay informed
+• Minor adjustments needed
+
+**🟢 Advisory (Informational):**
+• General weather updates
+• Temperature changes
+• Seasonal tips
+• Activity suggestions
+• Health reminders
+
+**Customization Options:**
+
+**📍 Location-Based:**
+✅ Alerts for each saved location
+✅ Home location priority
+✅ Travel destination alerts
+✅ Family location monitoring
+✅ Work location updates
+
+**🎚️ Threshold Settings:**
+• Temperature above/below X°C
+• Rain probability above X%
+• Wind speed over X km/h
+• UV index above X
+• Humidity levels
+
+**⏰ Timing Preferences:**
+• Quiet hours (no alerts)
+• Morning briefing time
+• Evening summary time
+• Work hours only
+• Weekend settings
+
+**📱 Delivery Methods:**
+• Push notifications
+• In-app alerts
+• Email summaries
+• SMS (premium)
+• Desktop notifications
+
+**Smart Features:**
+
+**🤖 AI-Powered:**
+• Learning your preferences
+• Predicting your needs
+• Contextual alerts
+• Activity-based suggestions
+• Pattern recognition
+
+**📊 Predictive Alerts:**
+• Weather changes ahead
+• Trend analysis
+• 48-hour outlook
+• Week ahead planning
+• Seasonal predictions
+
+**🔄 Auto-Adjust:**
+• Location-aware
+• Time-zone smart
+• Activity detection
+• Calendar integration
+• Travel mode
+
+**Alert Examples:**
+
+**Morning Alert:**
+"☀️ Good morning! Today: 32°C, sunny. UV index HIGH - wear sunscreen! Perfect for outdoor activities until 2 PM."
+
+**Rain Alert:**
+"🌧️ Rain expected in 2 hours (80% probability). Consider bringing an umbrella if going out!"
+
+**Severe Alert:**
+"⚠️ WEATHER WARNING: Heavy rainfall expected in Phnom Penh 6-9 PM. Possible flooding in low areas. Stay safe!"
+
+**Temperature Alert:**
+"🌡️ Heat advisory: Tomorrow's high 38°C. Stay hydrated, avoid midday sun, check on elderly neighbors."
+
+**Setting Up Alerts:**
+
+**Step 1: Choose Locations**
+📍 Select which places to monitor
+
+**Step 2: Set Thresholds**
+🎚️ Define your alert triggers
+
+**Step 3: Pick Delivery**
+📱 Choose how to receive alerts
+
+**Step 4: Customize Timing**
+⏰ Set quiet hours & schedules
+
+**Step 5: Test Alerts**
+✅ Verify everything works
+
+**Data Sources:**
+
+**Official Sources:**
+🏛️ Cambodia Meteorology Department
+🌏 Regional weather services
+🛰️ Satellite monitoring
+📡 Radar networks
+🌐 International agencies
+
+**Integration:**
+📅 Calendar apps
+🗺️ Maps navigation
+🚗 Travel apps
+📱 Smart home
+⌚ Wearables
+
+**Alert Management:**
+
+**History:**
+📋 View past alerts
+📊 Alert statistics
+🔍 Search history
+📁 Export data
+🗑️ Clear history
+
+**Preferences:**
+⚙️ Fine-tune sensitivity
+🔕 Mute specific types
+⭐ Priority alerts only
+📊 Frequency limits
+🔄 Reset to defaults
+
+**Emergency Features:**
+
+**🆘 Emergency Mode:**
+• Critical alerts only
+• Maximum volume
+• Bypass quiet hours
+• Screen wake
+• Repeat notifications
+
+**👨‍👩‍👧‍👦 Family Sharing:**
+• Share alerts with family
+• Monitor loved ones
+• Group notifications
+• Emergency contacts
+• Safety check-ins
+
+**Stay safe with intelligent alerts! 🛡️**`;
+      }
+
+      // Help/capabilities
+      if (question.includes('help') || question.includes('what can you') || question.includes('capabilities') || question.includes('do you know')) {
+        return `**I'm WeatherWise AI - Here's what I can do:**
+
+✅ **Weather Information:**
+• Current conditions for any location
+• 7-day forecasts and trends
+• Historical weather data
+
+✅ **Cambodia Expertise:**
+• Monsoon season details (wet & dry)
+• Regional weather variations
+• Best travel times
+• Local weather phenomena
+
+✅ **Education:**
+• Weather terms explained simply
+• How to read weather maps
+• Understanding forecasts
+• Climate patterns
+
+✅ **Safety Guidance:**
+• Emergency preparedness tips
+• Severe weather warnings
+• Health recommendations
+• Safety during storms/floods/heat
+
+✅ **Conversational:**
+• Ask follow-up questions
+• Get personalized advice
+• Natural language understanding
+
+**It's free and easy to use**
+**No personal data collected**
+**Educational and informative**
+**Customizable and extendable**
+**Perfect for all ages**
+
+**Keep Exploring:**
+• Try different questions
+• Learn about weather science
+• Understand your local climate
+• Stay safe in severe weather
+
+**Try asking:** "What's the weather today?" or "Tell me about monsoon season" or "How do I read weather maps?"`;
+      }
+
+      // Default response for unrecognized questions
+      return `That's an interesting question! While I may not have specific information about that, I can help you with:
+
+• **Current weather** - Today's conditions and forecasts
+• **Cambodia's monsoons** - Wet and dry season information
+• **Safety tips** - How to stay safe in severe weather
+• **Weather education** - Understanding maps, terms, and phenomena
+• **Regional weather** - Differences across Cambodia
+• **Getting started** - How to use WeatherWise AI
+• **Features** - What I can do for you
+• **Privacy** - Your data is safe with us
+
+Could you rephrase your question or ask about one of these topics? I'm here to help! 😊`;
+    };
+
+    const focusInput = () => {
+      if (inputField.value) {
+        inputField.value.focus();
+      }
+    };
+
+    return {
+      messages,
+      userInput,
+      isTyping,
+      messagesContainer,
+      inputField,
+      mode,
+      showSuggestions,
+      sendMessage,
+      sendQuickAction,
+      sendResearchTopic,
+      showAskMode,
+      showResearchMode,
+      onSearchFocus,
+      useSuggestion,
+      formatMessage,
+      focusInput
+    };
+  }
+};
+</script>
+
+<style scoped>
+.weatherwise-ai-container {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.ai-chatbot-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Header */
+.chat-header {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #259ed9, #253949);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 2;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.logo-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #ff9b83, #ff7b5f);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  box-shadow: 0 8px 24px rgba(255, 155, 131, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.logo-icon:hover {
+  transform: scale(1.05) rotate(5deg);
+}
+
+.header-title h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.header-title p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* Main Search Section */
+.main-search-section {
+  padding: 2rem 1.5rem 1rem;
+  background: linear-gradient(135deg, rgba(37, 158, 217, 0.05), rgba(145, 207, 236, 0.05));
+  border-bottom: 1px solid rgba(37, 158, 217, 0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  border-radius: 50px;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.search-container:focus-within {
+  border-color: #259ed9;
+  box-shadow: 0 6px 30px rgba(37, 158, 217, 0.2);
+  transform: translateY(-2px);
+}
+
+.search-icon {
+  color: #64748b;
+  font-size: 1.25rem;
+  transition: color 0.3s ease;
+}
+
+.search-container:focus-within .search-icon {
+  color: #259ed9;
+}
+
+.main-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  color: #253949;
+  background: transparent;
+  font-weight: 500;
+}
+
+.main-search-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.main-send-btn {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.main-send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.main-send-btn.active {
+  background: linear-gradient(135deg, #259ed9, #91cfec);
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 158, 217, 0.3);
+}
+
+.main-send-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Search Suggestions */
+.search-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestion-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 25px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.suggestion-chip:hover {
+  border-color: #259ed9;
+  background: linear-gradient(135deg, rgba(37, 158, 217, 0.1), rgba(145, 207, 236, 0.1));
+  color: #259ed9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 158, 217, 0.15);
+}
+
+.suggestion-chip i {
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.suggestion-chip:hover i {
+  transform: scale(1.15);
+}
+
+/* Animated Background */
+.clouds-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.08;
+}
+
+.cloud {
+  position: absolute;
+  background: white;
+  border-radius: 100px;
+  opacity: 0.5;
+}
+
+.cloud::before,
+.cloud::after {
+  content: '';
+  position: absolute;
+  background: white;
+  border-radius: 100px;
+}
+
+.cloud1 {
+  width: 100px;
+  height: 40px;
+  top: 20%;
+  animation: float 25s infinite ease-in-out;
+}
+
+.cloud1::before {
+  width: 50px;
+  height: 50px;
+  top: -25px;
+  left: 10px;
+}
+
+.cloud1::after {
+  width: 60px;
+  height: 40px;
+  top: -15px;
+  right: 15px;
+}
+
+.cloud2 {
+  width: 120px;
+  height: 45px;
+  top: 50%;
+  animation: float 30s infinite ease-in-out 5s;
+}
+
+.cloud2::before {
+  width: 60px;
+  height: 60px;
+  top: -30px;
+  left: 15px;
+}
+
+.cloud2::after {
+  width: 70px;
+  height: 45px;
+  top: -20px;
+  right: 20px;
+}
+
+.cloud3 {
+  width: 80px;
+  height: 35px;
+  top: 75%;
+  animation: float 20s infinite ease-in-out 10s;
+}
+
+.cloud3::before {
+  width: 45px;
+  height: 45px;
+  top: -20px;
+  left: 10px;
+}
+
+.cloud3::after {
+  width: 50px;
+  height: 35px;
+  top: -15px;
+  right: 10px;
+}
+
+@keyframes float {
+  0%, 100% {
+    left: -150px;
+    transform: translateY(0);
+  }
+  50% {
+    left: 110%;
+    transform: translateY(-20px);
+  }
+}
+
+/* Chat Messages Area */
+.chat-messages {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  animation: slideIn 0.4s ease-out;
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.message.bot .message-avatar {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+}
+
+.message.user .message-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.message-content {
+  max-width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.message.user .message-content {
+  align-items: flex-end;
+}
+
+.message-bubble {
+  padding: 1rem 1.5rem;
+  border-radius: 20px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  word-wrap: break-word;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.message.bot .message-bubble {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  color: #1e293b;
+  border-bottom-left-radius: 6px;
+}
+
+.message.user .message-bubble {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-bottom-right-radius: 6px;
+}
+
+/* Enhanced message content styling */
+.message-bubble strong {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.message.user .message-bubble strong {
+  color: white;
+}
+
+.message-bubble em {
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.message-bubble .bullet {
+  color: #667eea;
+  font-weight: bold;
+  margin-right: 0.5rem;
+}
+
+.message-bubble .emoji {
+  font-size: 1.2em;
+  display: inline-block;
+  margin: 0 0.1rem;
+  vertical-align: middle;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding: 0 0.5rem;
+  font-weight: 500;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  padding: 1rem 1.5rem;
+  border-radius: 20px;
+  border-bottom-left-radius: 6px;
+  display: inline-flex;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.typing-indicator span {
+  width: 10px;
+  height: 10px;
+  background: #94a3b8;
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+.cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  animation: float 20s infinite ease-in-out;
+}
+
+.cloud::before,
+.cloud::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+}
+
+.cloud1 {
+  width: 100px;
+  height: 40px;
+  top: 20%;
+  left: -100px;
+  animation: float1 25s infinite linear;
+}
+
+.cloud2 {
+  width: 150px;
+  height: 50px;
+  top: 50%;
+  right: -150px;
+  animation: float2 30s infinite linear;
+}
+
+.cloud3 {
+  width: 120px;
+  height: 45px;
+  top: 70%;
+  left: -120px;
+  animation: float3 35s infinite linear;
+}
+
+@keyframes float1 {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(100vw + 200px)); }
+}
+
+@keyframes float2 {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-100vw - 200px)); }
+}
+
+@keyframes float3 {
+  0% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(calc(50vw + 100px)) translateY(-20px); }
+  100% { transform: translateX(calc(100vw + 200px)) translateY(0); }
+}
+
+/* Chat Messages */
+.chat-messages {
+  background: linear-gradient(135deg, #c3e4f3, #e8f5fc);
+  padding: 2rem;
+  min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
+  position: relative;
+  z-index: 2;
+  scroll-behavior: smooth;
+}
+
+.message {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.bot {
+  justify-content: flex-start;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.message.bot .message-avatar {
+  background: linear-gradient(135deg, #259ed9, #91cfec);
+  color: white;
+}
+
+.message.user .message-avatar {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: white;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+}
+
+.message.user .message-content {
+  align-items: flex-end;
+}
+
+.message-bubble {
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.message.bot .message-bubble {
+  background: white;
+  color: #1e293b;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message.user .message-bubble {
+  background: linear-gradient(135deg, #259ed9, #1e88c7);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message-bubble :deep(strong) {
+  font-weight: 700;
+  color: #259ed9;
+}
+
+.message.user .message-bubble :deep(strong) {
+  color: white;
+}
+
+.message-bubble :deep(.bullet) {
+  color: #259ed9;
+  margin-right: 0.5rem;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+  padding: 0 0.25rem;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  gap: 0.4rem;
+  padding: 1rem 1.25rem;
+  background: white;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: #259ed9;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+/* Main Action Buttons */
+.main-action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(135deg, rgba(37, 158, 217, 0.08), rgba(145, 207, 236, 0.08));
+  position: relative;
+  z-index: 2;
+}
+
+.main-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: white;
+  border: 3px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.main-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+}
+
+.ask-btn::before {
+  background: linear-gradient(135deg, #259ed9, #91cfec);
+}
+
+.research-btn::before {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+}
+
+.main-action-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.main-action-btn:hover::before {
+  opacity: 1;
+}
+
+.main-action-btn:active {
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  font-size: 2rem;
+  position: relative;
+  z-index: 1;
+  transition: all 0.4s ease;
+}
+
+.ask-btn .btn-icon {
+  background: linear-gradient(135deg, #259ed9, #91cfec);
+  color: white;
+}
+
+.research-btn .btn-icon {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: white;
+}
+
+.main-action-btn:hover .btn-icon {
+  background: white;
+  transform: scale(1.1);
+}
+
+.ask-btn:hover .btn-icon {
+  color: #259ed9;
+}
+
+.research-btn:hover .btn-icon {
+  color: #8b5cf6;
+}
+
+.btn-content {
+  flex: 1;
+  text-align: left;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-content h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #253949;
+  transition: color 0.4s ease;
+}
+
+.btn-content p {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  color: #64748b;
+  font-weight: 500;
+  transition: color 0.4s ease;
+}
+
+.main-action-btn:hover .btn-content h3,
+.main-action-btn:hover .btn-content p {
+  color: white;
+}
+
+/* Research Topics */
+.research-topics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.08));
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(139, 92, 246, 0.15);
+  position: relative;
+  z-index: 2;
+}
+
+.research-topic-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  background: white;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #253949;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.research-topic-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: -1;
+}
+
+.research-topic-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.research-topic-btn:hover::before {
+  opacity: 1;
+}
+
+.research-topic-btn i {
+  font-size: 1.8rem;
+  color: #8b5cf6;
+  transition: all 0.35s ease;
+}
+
+.research-topic-btn:hover i {
+  color: white;
+  transform: scale(1.15);
+}
+
+.research-topic-btn span {
+  transition: color 0.35s ease;
+}
+
+.research-topic-btn:hover span {
+  color: white;
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #c3e4f3, #e8f5fc);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(37, 158, 217, 0.15);
+  position: relative;
+  z-index: 2;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1.2rem 1rem;
+  background: white;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #253949;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #259ed9, #91cfec);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: -1;
+}
+
+.action-btn:hover {
+  border-color: #259ed9;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(37, 158, 217, 0.25);
+  color: white;
+}
+
+.action-btn:hover::before {
+  opacity: 1;
+}
+
+.action-btn:hover i {
+  color: white;
+  transform: scale(1.1);
+}
+
+.action-btn:active {
+  transform: translateY(-2px);
+}
+
+.action-btn i {
+  font-size: 1.75rem;
+  color: #667eea;
+  transition: all 0.35s ease;
+}
+
+.action-btn span {
+  transition: color 0.35s ease;
+}
+
+/* Ask Questions Button */
+.ask-questions-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 1rem;
+  background: linear-gradient(135deg, #c3e4f3, #e8f5fc);
+  display: flex;
+  justify-content: center;
+}
+
+.ask-questions-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, #259ed9, #1e88c7);
+  border: none;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(37, 158, 217, 0.35);
+}
+
+.ask-questions-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 24px rgba(37, 158, 217, 0.5);
+}
+
+.ask-questions-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.ask-questions-btn i {
+  font-size: 1.2rem;
+}
+
+/* Chat Input */
+.chat-input-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.75rem 2rem 2rem;
+  background: transparent;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  outline: none;
+  background: white;
+  color: #64748b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.chat-input:focus {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.chat-input::placeholder {
+  color: #94a3b8;
+}
+
+.send-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #259ed9, #1e88c7);
+  border: none;
+  color: white;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(37, 158, 217, 0.4);
+  flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(37, 158, 217, 0.5);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scrollbar Styling */
+.chat-messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+  border-radius: 10px;
+  border: 2px solid #f1f5f9;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+}
+
+/* Dark Theme */
+:global(body.dark-theme) .chat-messages {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+}
+
+:global(body.dark-theme) .message.bot .message-bubble {
+  background: linear-gradient(135deg, #334155, #475569);
+  color: #f1f5f9;
+}
+
+:global(body.dark-theme) .typing-indicator {
+  background: linear-gradient(135deg, #334155, #475569);
+}
+
+:global(body.dark-theme) .quick-actions {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.95));
+}
+
+:global(body.dark-theme) .action-btn {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:global(body.dark-theme) .action-btn:hover {
+  border-color: #667eea;
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.35);
+}
+
+:global(body.dark-theme) .action-btn i {
+  color: #94a3b8;
+}
+
+:global(body.dark-theme) .action-btn:hover i {
+  color: white;
+}
+
+:global(body.dark-theme) .chat-input-container {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.95));
+}
+
+:global(body.dark-theme) .chat-input {
+  background: #334155;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+:global(body.dark-theme) .chat-input::placeholder {
+  color: #64748b;
+}
+
+:global(body.dark-theme) .chat-messages::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+:global(body.dark-theme) .chat-messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #475569, #334155);
+  border-color: #1e293b;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .chat-header {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .logo-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 1.6rem;
+  }
+
+  .header-title h2 {
+    font-size: 1.4rem;
+  }
+
+  .header-title p {
+    font-size: 0.8rem;
+  }
+
+  .main-search-section {
+    padding: 1.5rem 1rem 0.75rem;
+  }
+
+  .search-container {
+    padding: 0.65rem 1rem;
+  }
+
+  .main-search-input {
+    font-size: 0.95rem;
+  }
+
+  .main-send-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .search-suggestions {
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .suggestion-chip {
+    padding: 0.55rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .suggestion-chip i {
+    font-size: 0.9rem;
+  }
+
+  .chat-messages {
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .message-content {
+    max-width: 82%;
+  }
+
+  .message-bubble {
+    padding: 0.9rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .message-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .action-btn {
+    padding: 1rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .action-btn i {
+    font-size: 1.5rem;
+  }
+
+  .main-action-buttons {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .main-action-btn {
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+
+  .btn-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.75rem;
+  }
+
+  .btn-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .btn-content p {
+    font-size: 0.85rem;
+  }
+
+  .research-topics {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .research-topic-btn {
+    padding: 1.25rem 1rem;
+  }
+
+  .research-topic-btn i {
+    font-size: 1.6rem;
+  }
+
+  .ask-questions-section {
+    padding: 1.25rem 1.5rem 0.75rem;
+  }
+
+  .ask-questions-btn {
+    padding: 0.9rem 2rem;
+    font-size: 1rem;
+  }
+
+  .ask-questions-btn i {
+    font-size: 1.1rem;
+  }
+
+  .chat-input-container {
+    padding: 1.25rem 1.5rem;
+    gap: 0.75rem;
+  }
+
+  .chat-input {
+    padding: 0.9rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .send-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 1rem;
+  }
+}
+</style>

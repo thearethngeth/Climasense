@@ -247,7 +247,7 @@ export default createStore({
       if (!state.lastUpdated) return null
       return new Date(state.lastUpdated).toLocaleString()
     },
-    getTemperatureUnit: state => state.units === 'imperial' ? '°F' : '°C',
+    getTemperatureUnit: state => `${String.fromCharCode(176)}${state.units === 'imperial' ? 'F' : 'C'}`,
     getSpeedUnit: state => state.units === 'imperial' ? 'mph' : 'm/s',
     hasAlerts: state => state.weatherAlerts && state.weatherAlerts.length > 0,
     

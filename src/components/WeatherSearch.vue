@@ -1,16 +1,13 @@
 <!-- src/components/WeatherSearch.vue -->
 <template>
-  <div class="weather-search mb-4" data-aos="fade-down">
-    <div class="search-container">
-      <h2 class="search-title">
-        <i class="fas fa-cloud-sun me-2"></i>Weather Forecast
-      </h2>
-      <div class="search-box">
-        <div class="search-input-group">
-          <i class="fas fa-magnifying-glass search-icon"></i>
+  <div class="ws-wrap">
+    <div class="ws-inner">
+      <div class="ws-input-row">
+        <div class="ws-input-group">
+          <i class="fas fa-magnifying-glass ws-search-icon"></i>
           <input
             type="text"
-            class="search-input"
+            class="ws-input"
             placeholder="Search for a city..."
             v-model="cityInput"
             @keyup.enter="searchCity"
@@ -19,80 +16,49 @@
             autocomplete="off"
             :disabled="loading"
           />
-          
-          <!-- Search Suggestions -->
-          <div v-if="showSuggestions && (suggestions.length > 0 || recentSearches.length > 0)" class="search-suggestions">
-            <div v-if="suggestions.length > 0" class="suggestions-section">
-              <h4 class="suggestions-title">Suggestions</h4>
-              <ul class="suggestions-list">
-                <li v-for="(suggestion, index) in suggestions" :key="`sugg-${index}`" @click="selectSuggestion(suggestion)">
-                  <i class="fas fa-location-dot"></i>
-                  <span>{{ suggestion.name }}, {{ suggestion.country }}</span>
+          <div v-if="showSuggestions && (suggestions.length > 0 || recentSearches.length > 0)" class="ws-suggestions">
+            <div v-if="suggestions.length > 0" class="sugg-section">
+              <p class="sugg-label">Suggestions</p>
+              <ul class="sugg-list">
+                <li v-for="(s, i) in suggestions" :key="`s-${i}`" @click="selectSuggestion(s)">
+                  <i class="fas fa-location-dot"></i> {{ s.name }}, {{ s.country }}
                 </li>
               </ul>
             </div>
-            
-            <div v-if="recentSearches.length > 0" class="suggestions-section">
-              <h4 class="suggestions-title">Recent Searches</h4>
-              <ul class="suggestions-list">
-                <li v-for="(search, index) in recentSearches" :key="`recent-${index}`" @click="selectSuggestion(search)">
-                  <i class="fas fa-history"></i>
-                  <span>{{ search.name }}, {{ search.country }}</span>
-                  <button class="btn-clear-history" @click.stop="removeFromHistory(index)">
-                    <i class="fas fa-xmark"></i>
-                  </button>
+            <div v-if="recentSearches.length > 0" class="sugg-section">
+              <p class="sugg-label">Recent</p>
+              <ul class="sugg-list">
+                <li v-for="(r, i) in recentSearches" :key="`r-${i}`" @click="selectSuggestion(r)">
+                  <i class="fas fa-history"></i> {{ r.name }}, {{ r.country }}
+                  <button class="sugg-del" @click.stop="removeFromHistory(i)"><i class="fas fa-xmark"></i></button>
                 </li>
               </ul>
             </div>
           </div>
         </div>
-        <div class="search-buttons">
-          <button
-            class="search-button btn-search"
-            @click="searchCity"
-            :disabled="loading"
-          >
-            <i class="fas fa-search me-2"></i> Search
-          </button>
-          <button
-            class="search-button btn-location"
-            @click="getCurrentLocation"
-            :disabled="loading"
-          >
-            <i class="fas fa-location-dot me-2"></i> Current Location
-          </button>
-        </div>
+        <button class="ws-btn ws-btn-primary" @click="searchCity" :disabled="loading">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <button class="ws-btn ws-btn-secondary" @click="getCurrentLocation" :disabled="loading">
+          <i class="fas fa-crosshairs"></i> Current Location
+        </button>
       </div>
-      
-      <!-- Popular Cities Quick Access -->
-      <div class="popular-cities">
-        <span class="popular-label">Popular:</span>
-        <div class="popular-city-tags">
-          <button 
-            v-for="city in popularCities" 
-            :key="city.name" 
-            @click="quickSearch(city)"
-            class="popular-city-tag"
-          >
-            {{ city.name }}
-          </button>
-        </div>
+
+      <div class="ws-popular">
+        <span class="ws-pop-label">Popular:</span>
+        <button v-for="city in popularCities" :key="city.name" @click="quickSearch(city)" class="ws-chip">
+          {{ city.name }}
+        </button>
       </div>
-      
-      <div v-if="error" class="error-alert">
-        <i class="fas fa-circle-exclamation me-2"></i>{{ error }}
+
+      <div v-if="error" class="ws-error">
+        <i class="fas fa-circle-exclamation"></i> {{ error }}
       </div>
-      
-      <transition name="fade">
-        <div v-if="loading" class="loading-indicator">
-          <div class="spinner">
-            <div class="bounce1"></div>
-            <div class="bounce2"></div>
-            <div class="bounce3"></div>
-          </div>
-          <span class="ms-2">Fetching weather data...</span>
-        </div>
-      </transition>
+
+      <div v-if="loading" class="ws-loading">
+        <div class="ws-dot"></div><div class="ws-dot"></div><div class="ws-dot"></div>
+        <span>Fetching weather data...</span>
+      </div>
     </div>
   </div>
 </template>
@@ -218,7 +184,7 @@ export default {
     },
     
     handleClickOutside(event) {
-      const searchContainer = this.$el.querySelector('.search-input-group');
+      const searchContainer = this.$el.querySelector('.ws-input-group');
       if (searchContainer && !searchContainer.contains(event.target)) {
         this.showSuggestions = false;
       }
@@ -285,330 +251,210 @@ export default {
   },
 };
 </script>
-
 <style scoped>
-.weather-search {
-  max-width: 800px;
-  margin: 0 auto;
+.ws-wrap { width: 100%; }
+.ws-inner { display: flex; flex-direction: column; gap: 10px; }
+
+.ws-input-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 8px;
+  align-items: start;
 }
 
-.search-container {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border-radius: 20px;
-  padding: 25px;
-  box-shadow: 0 15px 30px rgba(124, 58, 237, 0.3);
-  color: white;
+.ws-input-group {
   position: relative;
-  overflow: visible;
+  min-width: 0;
 }
 
-.search-title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 20px;
-  text-align: center;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  letter-spacing: 0.5px;
-}
-
-.search-box {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.search-input-group {
-  position: relative;
-  width: 100%;
-}
-
-.search-icon {
+.ws-search-icon {
   position: absolute;
-  left: 15px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: #a5a6f6;
-  font-size: 1.2rem;
-  z-index: 2;
+  color: var(--text-muted, #8aa0b0);
+  font-size: 14px;
+  pointer-events: none;
 }
 
-.search-input {
+.ws-input {
   width: 100%;
-  padding: 16px 16px 16px 45px;
-  border-radius: 12px;
-  border: none;
-  font-size: 1.1rem;
-  background-color: rgba(255, 255, 255, 0.9);
-  transition: all 0.3s ease;
-  color: #333;
-  z-index: 1;
-}
-
-.search-input:focus {
+  min-height: 44px;
+  padding: 11px 14px 11px 40px;
+  border: 1px solid var(--border, rgba(74,144,196,0.16));
+  border-radius: 999px;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #1a2d3d);
+  font-size: 14px;
+  font-family: inherit;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
-  background-color: white;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
-.search-input::placeholder {
-  color: #9ca3af;
+.ws-input:focus {
+  border-color: var(--accent, #4a90c4);
+  box-shadow: 0 0 0 4px rgba(74,144,196,0.12);
 }
 
-/* Search suggestions dropdown */
-.search-suggestions {
+.ws-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border, rgba(74,144,196,0.16));
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.ws-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ws-btn-primary {
+  background: var(--accent, #4a90c4);
+  color: var(--text-on-accent, #fff);
+  border-color: var(--accent, #4a90c4);
+}
+.ws-btn-primary:hover { background: var(--accent-dark, #2e6fa3); }
+.ws-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.ws-btn-secondary {
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary, #4a6070);
+}
+.ws-btn-secondary:hover {
+  background: var(--accent-light, #e8f4fd);
+  color: var(--accent-dark, #2e6fa3);
+  border-color: var(--border-strong, rgba(74,144,196,0.3));
+}
+
+.ws-suggestions {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  max-height: 300px;
-  overflow-y: auto;
-  z-index: 100;
-  animation: slideDown 0.2s ease;
+  z-index: 300;
+  overflow: hidden;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, rgba(74,144,196,0.16));
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg, 0 8px 32px rgba(30,80,128,0.12));
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.suggestions-section {
-  padding: 10px 0;
-}
-
-.suggestions-section:not(:last-child) {
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.suggestions-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #9ca3af;
+.sugg-section { padding: 9px 0 5px; }
+.sugg-label {
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 0 15px;
-  margin: 5px 0;
+  letter-spacing: 0.09em;
+  color: var(--text-muted, #8aa0b0);
+  padding: 0 14px;
+  margin-bottom: 4px;
 }
-
-.suggestions-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.suggestions-list li {
-  padding: 10px 15px;
+.sugg-list { list-style: none; padding: 0; margin: 0; }
+.sugg-list li {
   display: flex;
   align-items: center;
-  color: #333;
+  gap: 9px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text-primary, #1a2d3d);
   cursor: pointer;
-  position: relative;
+  transition: background 0.15s;
 }
-
-.suggestions-list li:hover {
-  background-color: #f9fafb;
-}
-
-.suggestions-list li i {
-  color: #6366f1;
-  margin-right: 10px;
-  font-size: 0.9rem;
-}
-
-.btn-clear-history {
-  position: absolute;
-  right: 15px;
-  background: none;
-  border: none;
-  color: #9ca3af;
+.sugg-list li i { color: var(--accent, #4a90c4); font-size: 13px; }
+.sugg-list li:hover { background: var(--accent-light, #e8f4fd); }
+.sugg-del {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted, #8aa0b0);
   cursor: pointer;
-  padding: 5px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
 }
+.sugg-del:hover { background: var(--bg-card-alt, #f8fbff); color: var(--text-primary, #1a2d3d); }
 
-.btn-clear-history:hover {
-  color: #ef4444;
-  background-color: #fee2e2;
-}
-
-/* Popular cities */
-.popular-cities {
+.ws-popular {
   display: flex;
   align-items: center;
-  margin-top: 15px;
+  gap: 6px;
   flex-wrap: wrap;
-  gap: 10px;
 }
 
-.popular-label {
-  font-size: 0.9rem;
-  opacity: 0.9;
+.ws-pop-label {
+  font-size: 11px;
+  color: var(--text-muted, #8aa0b0);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.popular-city-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.popular-city-tag {
-  background-color: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 30px;
-  padding: 5px 12px;
-  font-size: 0.85rem;
-  color: white;
+.ws-chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border, rgba(74,144,196,0.16));
+  background: transparent;
+  color: var(--text-secondary, #4a6070);
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-family: inherit;
+  font-weight: 700;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.ws-chip:hover {
+  background: var(--accent-light, #e8f4fd);
+  color: var(--accent-dark, #2e6fa3);
+  border-color: var(--border-strong, rgba(74,144,196,0.3));
 }
 
-.popular-city-tag:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.search-buttons {
+.ws-error {
   display: flex;
-  gap: 10px;
-  margin-top: 5px;
-}
-
-.search-button {
-  flex: 1;
-  padding: 14px;
-  border: none;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  background: rgba(218, 92, 72, 0.08);
+  border: 1px solid rgba(218, 92, 72, 0.25);
   border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  color: #b84f3e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ws-loading {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-muted, #8aa0b0);
+  padding: 2px 0;
 }
 
-.btn-search {
-  background-color: white;
-  color: #4f46e5;
+.ws-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #4a90c4);
+  animation: dotBounce 1.2s infinite ease-in-out;
+}
+.ws-dot:nth-child(2) { animation-delay: 0.2s; }
+.ws-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 
-.btn-search:hover {
-  background-color: #f3f4f6;
-  transform: translateY(-2px);
-}
-
-.btn-location {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.btn-location:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.search-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.error-alert {
-  background-color: rgba(239, 68, 68, 0.9);
-  color: white;
-  padding: 12px;
-  border-radius: 12px;
-  margin-top: 15px;
-  text-align: center;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Custom loading spinner */
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 15px;
-  color: white;
-  font-size: 1rem;
-}
-
-.spinner {
-  width: 70px;
-  text-align: center;
-  margin-right: 8px;
-}
-
-.spinner > div {
-  width: 12px;
-  height: 12px;
-  background-color: white;
-  border-radius: 100%;
-  display: inline-block;
-  animation: bouncedelay 1.4s infinite ease-in-out both;
-  margin: 0 2px;
-}
-
-.spinner .bounce1 {
-  animation-delay: -0.32s;
-}
-
-.spinner .bounce2 {
-  animation-delay: -0.16s;
-}
-
-@keyframes bouncedelay {
-  0%, 80%, 100% { 
-    transform: scale(0);
-  } 40% { 
-    transform: scale(1.0);
-  }
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-leave-to, .fade-enter-from {
-  opacity: 0;
-}
-
-/* Responsive adjustments */
-@media (min-width: 640px) {
-  .search-box {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-  
-  .search-input-group {
-    flex: 3;
-  }
-  
-  .search-buttons {
-    flex: 2;
-    margin-top: 0;
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 640px) {
-  .popular-cities {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .popular-city-tags {
-    margin-top: 8px;
-  }
+@media (max-width: 760px) {
+  .ws-input-row { grid-template-columns: 1fr; }
+  .ws-btn { width: 100%; }
 }
 </style>
